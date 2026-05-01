@@ -1,0 +1,8 @@
+.browser_profile/
+.venv/
+__pycache__/
+*.pyc
+chrome.log
+mintel.db
+mintel.xlsx
+imagens/
