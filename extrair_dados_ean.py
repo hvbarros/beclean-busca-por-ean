@@ -588,6 +588,48 @@ def lojas_ordenadas(ean: str, con: sqlite3.Connection) -> list:
     return LOJAS_FALLBACK
 
 
+def _tokens(texto: str) -> set[str]:
+    """Normaliza texto e retorna conjunto de tokens relevantes."""
+    import unicodedata, re
+    STOP = {
+        # português
+        'de', 'da', 'do', 'das', 'dos', 'e', 'o', 'a', 'os', 'as', 'com',
+        'para', 'em', 'um', 'uma', 'por', 'ao', 'aos', 'na', 'no', 'nos',
+        'nas', 'se', 'que', 'ou', 'ja', 'esta', 'sao',
+        # inglês
+        'the', 'and', 'for', 'of', 'with', 'in', 'is', 'a', 'an', 'to',
+        'by', 'at', 'it', 'its', 'be',
+        # unidades
+        'ml', 'g', 'kg', 'l', 'mg', 'gr',
+    }
+    nfkd = unicodedata.normalize('NFKD', texto)
+    ascii_str = nfkd.encode('ASCII', 'ignore').decode('ASCII').lower()
+    ascii_str = re.sub(r'[^a-z0-9\s]', ' ', ascii_str)
+    return {t for t in ascii_str.split() if t not in STOP and len(t) > 1}
+
+
+def similaridade_nome(nome_encontrado: str | None, ean: str, con: sqlite3.Connection) -> float:
+    """
+    Calcula sobreposição de tokens entre o nome encontrado na loja e o nome Mintel.
+    Retorna coeficiente de sobreposição [0, 1]: interseção / mínimo dos dois conjuntos.
+    Retorna 1.0 se não há dados Mintel (sem base para rejeitar).
+    """
+    if not nome_encontrado:
+        return 1.0
+    row = con.execute(
+        "SELECT marca, produto FROM produtos WHERE codigo_barras = ?", (ean,)
+    ).fetchone()
+    if not row:
+        return 1.0
+    nome_mintel = " ".join(filter(None, row))
+    t_encontrado = _tokens(nome_encontrado)
+    t_mintel = _tokens(nome_mintel)
+    if not t_encontrado or not t_mintel:
+        return 1.0
+    intersec = t_encontrado & t_mintel
+    return len(intersec) / min(len(t_encontrado), len(t_mintel))
+
+
 def _tentar_download(info: dict, ean: str, fonte: str, con: sqlite3.Connection) -> tuple:
     """Tenta baixar a imagem. Retorna (imagem_local, placeholder_detectado)."""
     if not info.get("imagem"):
@@ -675,6 +717,18 @@ async def process_ean(page: Page, ean: str, con: sqlite3.Connection, fonte: str 
         print(f"    → sem resultado")
         return
 
+    # Verifica similaridade com o nome Mintel antes de aceitar
+    LIMIAR_SIMILARIDADE = 0.20
+    sim = similaridade_nome(info["nome"], ean, con)
+    if sim < LIMIAR_SIMILARIDADE:
+        print(f"    ↳ nome incompatível com Mintel (similaridade {sim:.0%}) — descartado como falso positivo")
+        print(f"        encontrado : {(info['nome'] or '')[:70]}")
+        row = con.execute("SELECT marca, produto FROM produtos WHERE codigo_barras = ?", (ean,)).fetchone()
+        print(f"        mintel     : {' '.join(filter(None, row or []))[:70]}")
+        if buscador:
+            marcar_tentativa(con, ean, buscador)
+        return
+
     if imagem_local:
         status = "ok"
     elif info["imagem"]:
@@ -692,7 +746,8 @@ async def process_ean(page: Page, ean: str, con: sqlite3.Connection, fonte: str 
     )
 
     flag = "✓" if imagem_local else "✗"
-    print(f"  {ean} [{flag}] [{buscador}] [{info['nome_fonte']}] {(info['nome'] or '')[:55]}")
+    sim_str = f"{sim:.0%}" if sim < 1.0 else ""
+    print(f"  {ean} [{flag}] [{buscador}] [{info['nome_fonte']}] {sim_str} {(info['nome'] or '')[:55]}")
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
