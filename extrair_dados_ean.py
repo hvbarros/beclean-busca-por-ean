@@ -33,6 +33,7 @@ DELAY_MIN = 2.5
 DELAY_MAX = 4.5
 LIMIAR_SIMILARIDADE = 0.20
 MAX_LINKS_GOOGLE = 10
+REINICIO_CHROME_INTERVALO = 10
 
 
 # ── DB ───────────────────────────────────────────────────────────────────────
@@ -88,12 +89,18 @@ def marcar_tentativa(con: sqlite3.Connection, ean: str, loja: str):
     con.commit()
 
 
-def load_pending(con: sqlite3.Connection, reprocessar: bool = False) -> list[str]:
+def load_pending(con: sqlite3.Connection, reprocessar: bool = False, incluir_suspeitos: bool = False) -> list[str]:
     with open(CSV_PATH, newline="", encoding="utf-8") as f:
         all_eans = [row["ean"].strip() for row in csv.DictReader(f) if row["ean"].strip()]
 
+    suspeitos = {r[0] for r in con.execute(
+        "SELECT ean FROM enriquecimento_ean WHERE status = 'suspeito'"
+    ).fetchall()}
+
     if reprocessar:
-        return all_eans
+        if incluir_suspeitos:
+            return all_eans
+        return [e for e in all_eans if e not in suspeitos]
 
     ok_set = {r[0] for r in con.execute(
         "SELECT ean FROM enriquecimento_ean WHERE status IN ('ok', 'suspeito')"
@@ -296,90 +303,117 @@ BLACKLIST = {
 
 LOJAS_FALLBACK_ATIVO = True
 
+SELETOR_INPUT_PADRAO = (
+    "input[type='search'], input[name='q'], "
+    "input[placeholder*='busca' i], input[placeholder*='search' i], "
+    "input[placeholder*='produto' i]"
+)
+
 LOJAS_FALLBACK = [
     # ordenado por histórico de sucessos (OK)
     {
-        "nome":             "farmaciasapp",       # 59 OK
-        "url":              "https://www.farmaciasapp.com.br/busca?q={ean}",
-        "seletor":          "a[href*='farmaciasapp.com.br/'], .product-card a, h2 a",
-        "sem_resultado_js": "() => !document.body.innerText.includes('{ean}')",
+        "nome":           "farmaciasapp",
+        "url":            "https://www.farmaciasapp.com.br",
+        "seletor":        "a[href*='farmaciasapp.com.br/'], .product-card a, h2 a",
+        "busca_via_form": True,
     },
     {
-        "nome":             "amazon",             # 59 OK
-        "url":              "https://www.amazon.com.br/s?k={ean}",
-        "seletor":          "[data-component-type='s-search-result'] h2 a, a.a-link-normal[href*='/dp/']",
-        "sem_resultado_js": "() => !document.body.innerText.includes('{ean}') || document.body.innerText.includes('Nenhum resultado para sua consulta')",
-    },
-    {
-        "nome":             "consultaremedios",   # 21 OK
-        "url":              "https://consultaremedios.com.br/busca?q={ean}",
-        "seletor":          "a[href$='/p'], .product-card a, h2 a",
-        "sem_resultado_js": "() => !document.body.innerText.includes('{ean}')",
-    },
-    {
-        "nome":             "drogaraia",          # 16 OK
-        "url":              "https://www.drogaraia.com.br/busca?q={ean}",
-        "seletor":          "a.product-item-link, .product-name a",
-        "sem_resultado_js": "() => !document.body.innerText.includes('{ean}')",
-    },
-    {
-        "nome":             "mercadolivre",       # 11 OK
-        "url":              "https://lista.mercadolivre.com.br/{ean}",
-        "seletor":          "a.poly-component__title, .ui-search-item__group--title a",
-        "sem_resultado_js": "() => !document.body.innerText.includes('{ean}')",
-    },
-    {
-        "nome":             "drogariavenancio",   # 11 OK
-        "url":              "https://www.drogariavenancio.com.br/busca?q={ean}",
-        "seletor":          "a.product-item-link, a[href$='/p'], .product-name a",
-        "sem_resultado_js": "() => !document.body.innerText.includes('{ean}')",
-    },
-    {
-        "nome":             "drogasil",           # 7 OK
-        "url":              "https://www.drogasil.com.br/busca?q={ean}",
-        "seletor":          "a.product-item-link, .product-name a",
-        "sem_resultado_js": "() => !document.body.innerText.includes('{ean}')",
-    },
-    {
-        "nome":           "ultrafarma",
-        "url":            "https://www.ultrafarma.com.br/busca?q={nome}",
-        "seletor":        "a.product-item-link, .product-name a, .product-card a",
-        "busca_por_nome": True,   # não aceita EAN; busca pelo nome do produto
-        "verificar_ean":  True,   # entra em cada resultado e confirma o EAN no texto
+        "nome":           "amazon",
+        "url":            "https://www.amazon.com.br",
+        "seletor_input":  "#twotabsearchtextbox, input[name='field-keywords']",
+        "seletor":        "[data-component-type='s-search-result'] h2 a, a.a-link-normal[href*='/dp/']",
+        "busca_via_form": True,
+        "busca_por_nome": True,
         "max_candidatos": 5,
     },
     {
-        "nome":            "panvel",     # 1 OK
-        "url":             "https://www.panvel.com/panvel/buscarProduto.do?termoPesquisa={ean}",
+        "nome":           "consultaremedios",
+        "url":            "https://consultaremedios.com.br",
+        "seletor":        "a[href$='/p'], .product-card a, h2 a",
+        "busca_via_form": True,
+    },
+    {
+        "nome":           "drogaraia",
+        "url":            "https://www.drogaraia.com.br",
+        "seletor":        "a.product-item-link, .product-name a",
+        "busca_via_form": True,
+        "busca_por_nome": True,
+        "max_candidatos": 5,
+    },
+    {
+        "nome":           "drogariavenancio",
+        "url":            "https://www.drogariavenancio.com.br",
+        "seletor":        "a.product-item-link, a[href$='/p'], .product-name a",
+        "busca_via_form": True,
+        "busca_por_nome": True,
+        "max_candidatos": 5,
+    },
+    {
+        "nome":           "drogasil",
+        "url":            "https://www.drogasil.com.br",
+        "seletor":        "a.product-item-link, .product-name a",
+        "busca_via_form": True,
+        "busca_por_nome": True,
+        "max_candidatos": 5,
+    },
+    {
+        "nome":           "ultrafarma",
+        "url":            "https://www.ultrafarma.com.br",
+        "seletor":        "a.product-item-link, .product-name a, .product-card a",
+        "busca_via_form": True,
+        "busca_por_nome": True,
+        "max_candidatos": 5,
+    },
+    {
+        "nome":            "panvel",
+        "url":             "https://www.panvel.com",
         "seletor":         "lib-card-item-v2-vertical a",
         "wait_until":      "networkidle",
         "extra_wait":      5000,
         "seletor_timeout": 15000,
-        "sem_resultado_js": "() => !document.body.innerText.includes('{ean}')",
+        "busca_via_form":  True,
+        "busca_por_nome":  True,
+        "max_candidatos":  5,
     },
     {
-        "nome":             "araujo",
-        "url":              "https://www.araujo.com.br/busca?q={ean}",
-        "seletor":          "a.product-item-link, a[href$='/p'], .product-name a",
-        "sem_resultado_js": "() => !document.body.innerText.includes('{ean}')",
+        "nome":           "araujo",
+        "url":            "https://www.araujo.com.br",
+        "seletor":        "a.product-item-link, a[href$='/p'], .product-name a",
+        "busca_via_form": True,
+        "busca_por_nome": True,
+        "max_candidatos": 5,
     },
     {
-        "nome":             "drogariasaopaulo",
-        "url":              "https://www.drogariasaopaulo.com.br/busca?q={ean}",
-        "seletor":          "a.product-item-link, a[href$='/p'], .product-name a",
-        "sem_resultado_js": "() => !document.body.innerText.includes('{ean}')",
+        "nome":           "drogariasaopaulo",
+        "url":            "https://www.drogariasaopaulo.com.br",
+        "seletor":        "a.product-item-link, a[href$='/p'], .product-name a",
+        "busca_via_form": True,
+        "busca_por_nome": True,
+        "max_candidatos": 5,
     },
     {
-        "nome":             "drogal",
-        "url":              "https://www.drogal.com.br/busca?q={ean}",
-        "seletor":          "a.product-item-link, a[href$='/p'], .product-name a",
-        "sem_resultado_js": "() => !document.body.innerText.includes('{ean}')",
+        "nome":           "drogal",
+        "url":            "https://www.drogal.com.br",
+        "seletor":        "a.product-item-link, a[href$='/p'], .product-name a",
+        "busca_via_form": True,
+        "busca_por_nome": True,
+        "max_candidatos": 5,
     },
     {
-        "nome":             "belezanaweb",        # 0 OK
-        "url":              "https://www.belezanaweb.com.br/busca/?q={ean}",
-        "seletor":          "a.showcase-item, [data-testid='product-card'] a, .product-name a",
-        "sem_resultado_js": "() => !document.body.innerText.includes('{ean}')",
+        "nome":           "belezanaweb",
+        "url":            "https://www.belezanaweb.com.br",
+        "seletor":        "a.showcase-item, [data-testid='product-card'] a, .product-name a",
+        "busca_via_form": True,
+        "busca_por_nome": True,
+        "max_candidatos": 5,
+    },
+    {
+        "nome":           "epocacosmeticos",
+        "url":            "https://www.epocacosmeticos.com.br",
+        "seletor":        "a[href$='/p']",
+        "busca_via_form": True,
+        "busca_por_nome": True,
+        "max_candidatos": 5,
     },
 ]
 
@@ -441,15 +475,96 @@ async def _search_por_nome(page: Page, loja: dict, ean: str, con: sqlite3.Connec
         if len(candidatos) >= max_cand:
             break
 
+    primeiro: str | None = None
     for href in candidatos:
         await page.goto(href, wait_until="domcontentloaded", timeout=20000)
         await page.wait_for_timeout(1000)
         ean_presente = await page.evaluate(f"() => document.body.innerText.includes('{ean}')")
         if ean_presente:
             return href
+        if primeiro is None:
+            primeiro = href
 
+    # Nenhum candidato confirmou o EAN — retorna o primeiro para a similaridade decidir
     await safe_goto_blank(page)
-    return None
+    return primeiro
+
+
+async def _search_via_form(page: Page, loja: dict, ean: str, con: sqlite3.Connection | None = None) -> str | None:
+    """
+    Busca via preenchimento de formulário.
+    - busca_por_nome=False: preenche com EAN, retorna primeiro resultado.
+    - busca_por_nome=True:  preenche com nome do produto, visita até
+      max_candidatos resultados preferindo o que confirma o EAN na página;
+      se nenhum confirmar, retorna o primeiro candidato.
+    """
+    if loja.get("busca_por_nome"):
+        if not con:
+            return None
+        row = con.execute(
+            "SELECT nome_produto_pt, marca, produto FROM produtos WHERE codigo_barras = ?", (ean,)
+        ).fetchone()
+        if not row:
+            return None
+        nome_pt, marca, produto = row
+        termo = _limpar_nome(nome_pt or f"{marca} {produto}").strip()
+        if not termo:
+            return None
+    else:
+        termo = ean
+
+    await page.goto(loja["url"], wait_until=loja.get("wait_until", "domcontentloaded"), timeout=20000)
+    await page.wait_for_timeout(random.randint(500, 1000))
+
+    seletor_input = loja.get("seletor_input", SELETOR_INPUT_PADRAO)
+    try:
+        await page.wait_for_selector(seletor_input, timeout=loja.get("seletor_timeout", 8000))
+    except PWTimeout:
+        return None
+    await page.fill(seletor_input, termo)
+    await page.keyboard.press("Enter")
+    await page.wait_for_load_state(loja.get("wait_until", "domcontentloaded"), timeout=20000)
+    await page.wait_for_timeout(loja.get("extra_wait", random.randint(800, 1200)))
+
+    try:
+        await page.wait_for_selector(loja["seletor"], timeout=loja.get("seletor_timeout", 8000), state="attached")
+    except PWTimeout:
+        return None
+
+    if loja.get("busca_por_nome"):
+        els = await page.query_selector_all(loja["seletor"])
+        max_cand = loja.get("max_candidatos", 5)
+        candidatos: list[str] = []
+        for el in els[:max_cand * 2]:
+            href = await el.get_attribute("href")
+            if href:
+                if not href.startswith("http"):
+                    href = urllib.parse.urljoin(page.url, href)
+                href = href.split("?")[0]
+                if href not in candidatos:
+                    candidatos.append(href)
+            if len(candidatos) >= max_cand:
+                break
+        primeiro: str | None = None
+        for href in candidatos:
+            await page.goto(href, wait_until="domcontentloaded", timeout=20000)
+            await page.wait_for_timeout(1000)
+            if await page.evaluate(f"() => document.body.innerText.includes('{ean}')"):
+                return href
+            if primeiro is None:
+                primeiro = href
+        await safe_goto_blank(page)
+        return primeiro
+    else:
+        el = await page.query_selector(loja["seletor"])
+        if not el:
+            return None
+        href = await el.get_attribute("href")
+        if not href:
+            return None
+        if not href.startswith("http"):
+            href = urllib.parse.urljoin(page.url, href)
+        return href.split("?")[0]
 
 
 async def search_lojas(
@@ -458,10 +573,13 @@ async def search_lojas(
     con: sqlite3.Connection | None = None,
     reprocessar: bool = False,
     sites_pausados: set | None = None,
+    excluir: set | None = None,
 ) -> tuple[str | None, str | None]:
     for loja in (lojas or LOJAS_FALLBACK):
         nome_loja = loja["nome"]
         if any(b in loja["url"] for b in BLACKLIST):
+            continue
+        if excluir and nome_loja in excluir:
             continue
         if sites_pausados and nome_loja in sites_pausados:
             print(f"      {nome_loja}: pulado (timeout nesta execução)")
@@ -470,14 +588,28 @@ async def search_lojas(
             print(f"      {nome_loja}: pulado (já tentado)")
             continue
         print(f"      {nome_loja}:", end=" ", flush=True)
+        _achou = False
         try:
-            # Lojas que não aceitam EAN: busca pelo nome do produto
+            # Busca via preenchimento de formulário
+            if loja.get("busca_via_form"):
+                resultado = await _search_via_form(page, loja, ean, con)
+                if resultado:
+                    print("link encontrado")
+                    _achou = True
+                    return resultado, nome_loja
+                print("não achou")
+                if con:
+                    marcar_tentativa(con, ean, nome_loja)
+                continue
+
+            # Lojas que buscam pelo nome do produto
             if loja.get("busca_por_nome"):
                 resultado = await _search_por_nome(page, loja, ean, con)
                 if resultado:
                     print("link encontrado")
+                    _achou = True
                     return resultado, nome_loja
-                print("EAN não encontrado em nenhum candidato")
+                print("sem candidatos válidos")
                 if con:
                     marcar_tentativa(con, ean, nome_loja)
                 continue
@@ -532,6 +664,7 @@ async def search_lojas(
                 url_depois = page.url.split("?")[0]
                 if url_depois != url_antes.split("?")[0]:
                     print(f"        → {url_depois}")
+                    _achou = True
                     return url_depois, loja["nome"]
                 print("não navegou")
 
@@ -540,6 +673,7 @@ async def search_lojas(
                 if not href.startswith("http"):
                     href = urllib.parse.urljoin(page.url, href)
                 print("link encontrado")
+                _achou = True
                 return href.split("?")[0], loja["nome"]
             print("não achou")
             if con:
@@ -549,11 +683,12 @@ async def search_lojas(
             if sites_pausados is not None:
                 sites_pausados.add(nome_loja)
             await safe_goto_blank(page)
-            continue
         except Exception as e:
             print(f"erro: {e}")
             await safe_goto_blank(page)
-            continue
+        finally:
+            if not _achou and excluir is not None:
+                excluir.add(nome_loja)
     return None, None
 
 
@@ -965,8 +1100,8 @@ def _tokens(texto: str) -> set[str]:
         # unidades
         'ml', 'g', 'kg', 'l', 'mg', 'gr',
     }
-    nfkd = unicodedata.normalize('NFKD', texto)
-    ascii_str = nfkd.encode('ASCII', 'ignore').decode('ASCII').lower()
+    nfkd = unicodedata.normalize('NFKD', texto.lower())
+    ascii_str = nfkd.encode('ASCII', 'ignore').decode('ASCII')
     ascii_str = re.sub(r'[^a-z0-9\s]', ' ', ascii_str)
     return {t for t in ascii_str.split() if t not in STOP and len(t) > 1}
 
@@ -1045,6 +1180,7 @@ def similaridade_nome(nome_encontrado: str | None, ean: str, con: sqlite3.Connec
     """
     if not nome_encontrado:
         return 0.0
+    nome_encontrado = nome_encontrado.strip().lower()
     if _NOME_DOCUMENTO.search(nome_encontrado):
         return 0.0
     row = con.execute(
@@ -1067,20 +1203,25 @@ def similaridade_nome(nome_encontrado: str | None, ean: str, con: sqlite3.Connec
     t_encontrado = _tokens(_limpar_nome(nome_ref))
     if not t_encontrado:
         return 1.0
-    # Exige que todos os tokens da marca limpa estejam presentes no nome encontrado
+    # Exige que ao menos um token da marca esteja presente no nome encontrado.
+    # Marcas compostas (ex: "Farmax Hidraderm") frequentemente aparecem nas lojas
+    # com apenas um dos componentes (geralmente a linha, não o fabricante).
     if marca:
         t_marca = _tokens(_limpar_marca(marca))
         if t_marca:
+            presente = False
             for tok in t_marca:
                 if tok in t_encontrado:
-                    continue
-                # aceita typos leves (ex: "naturallis" ↔ "naturaliss")
+                    presente = True
+                    break
                 if any(
                     difflib.SequenceMatcher(None, tok, t).ratio() >= 0.85
                     for t in t_encontrado
                     if abs(len(t) - len(tok)) <= 2
                 ):
-                    continue
+                    presente = True
+                    break
+            if not presente:
                 return 0.0
     nome_en = " ".join(filter(None, [marca, produto]))
     sims = [_sim_par(t_encontrado, ref) for ref in [nome_pt, nome_en] if ref]
@@ -1145,7 +1286,7 @@ def _salvar_suspeito_se_necessario(
 def _imprimir_resumo_ean(ean: str, con: sqlite3.Connection):
     """Imprime resumo do resultado final de um EAN e uma linha em branco de separação."""
     row = con.execute(
-        "SELECT nome, produto_url, buscador, status FROM enriquecimento_ean WHERE ean = ?", (ean,)
+        "SELECT nome, produto_url, buscador, status, motivo_suspeito FROM enriquecimento_ean WHERE ean = ?", (ean,)
     ).fetchone()
     ref_row = con.execute(
         "SELECT nome_produto_pt, marca, produto FROM produtos WHERE codigo_barras = ?", (ean,)
@@ -1157,10 +1298,13 @@ def _imprimir_resumo_ean(ean: str, con: sqlite3.Connection):
         ref_nome = nome_pt_r or f"{marca_r} {prod_r}".strip()
         ref_marca = marca_r or ""
     if row:
-        nome_enc, url, buscador, status = row
+        nome_enc, url, buscador, status, motivo = row
         sim = similaridade_nome(nome_enc, ean, con, produto_url=url) if nome_enc else 0.0
+        status_str = f"{status}  ({sim:.0%})"
+        if status == "suspeito" and motivo:
+            status_str += f"  [{motivo}]"
         print(f"  ── resultado ──────────────────────────────────────")
-        print(f"     status:     {status}  ({sim:.0%})")
+        print(f"     status:     {status_str}")
         print(f"     link:       {(url or '')[:120]}")
         print(f"     nome:       {(nome_enc or '')[:75]}")
         print(f"     ref. marca: {ref_marca[:55]}")
@@ -1234,43 +1378,64 @@ async def _executar_lojas(
     page: Page, ean: str, lojas: list, con: sqlite3.Connection,
     reprocessar: bool, sites_pausados: set | None, label: str = "Lojas diretas",
 ) -> tuple | None:
-    """Itera lojas diretas. Retorna (url, loja, result, 'loja_direta', img) no primeiro aceite, ou None."""
+    """Itera lojas diretas uma vez. Retorna (url, loja, result, 'loja_direta', img) no primeiro aceite, ou None."""
     print(f"    {label}")
     try:
-        while True:
-            url, loja = await search_lojas(page, ean, lojas, con=con, reprocessar=reprocessar, sites_pausados=sites_pausados)
-            if not url:
-                return None
+        for loja_conf in lojas:
+            nome_loja = loja_conf["nome"]
+            if any(b in loja_conf["url"] for b in BLACKLIST):
+                continue
+            if sites_pausados and nome_loja in sites_pausados:
+                print(f"      {nome_loja}: pulado (timeout nesta execução)")
+                continue
+            if con and not reprocessar and ja_tentou(con, ean, nome_loja):
+                print(f"      {nome_loja}: pulado (já tentado)")
+                continue
+            print(f"      {nome_loja}:", end=" ", flush=True)
+            url = None
             try:
+                if loja_conf.get("busca_via_form"):
+                    url = await _search_via_form(page, loja_conf, ean, con)
+                elif loja_conf.get("busca_por_nome"):
+                    url = await _search_por_nome(page, loja_conf, ean, con)
+                else:
+                    url, _ = await search_lojas(page, ean, [loja_conf], con=con, reprocessar=reprocessar, sites_pausados=sites_pausados)
+
+                if not url:
+                    print("não achou")
+                    marcar_tentativa(con, ean, nome_loja)
+                    continue
+                print("link encontrado")
+
                 result = await navigate_and_extract(page, url)
                 if result is None:
                     print(f"        nome genérico")
-                    marcar_tentativa(con, ean, loja)
+                    marcar_tentativa(con, ean, nome_loja)
                     continue
-                img, placeholder = _tentar_download(result, ean, loja, con)
+                img, placeholder = _tentar_download(result, ean, nome_loja, con)
                 if placeholder:
                     continue
                 sim = similaridade_nome(result["nome"], ean, con, produto_url=url)
                 nome_log = _limpar_nome(result["nome"] or "")
                 print(f"        Nome encontrado: {nome_log[:60]} (similaridade {sim:.0%})")
                 if sim == 0.0:
-                    marcar_tentativa(con, ean, loja)
+                    marcar_tentativa(con, ean, nome_loja)
                     continue
                 if sim < LIMIAR_SIMILARIDADE:
-                    _salvar_suspeito_se_necessario(con, ean, result, img, url, loja, "loja_direta", sim, motivo="similaridade baixa")
-                    marcar_tentativa(con, ean, loja)
+                    _salvar_suspeito_se_necessario(con, ean, result, img, url, nome_loja, "loja_direta", sim, motivo="similaridade baixa")
+                    marcar_tentativa(con, ean, nome_loja)
                     continue
                 print(f"        achou ✓")
-                return url, loja, result, "loja_direta", img
+                return url, nome_loja, result, "loja_direta", img
             except PWTimeout:
                 print(f"        timeout, próxima loja")
-                marcar_tentativa(con, ean, loja)
+                marcar_tentativa(con, ean, nome_loja)
                 if sites_pausados is not None:
-                    sites_pausados.add(loja)
+                    sites_pausados.add(nome_loja)
                 await safe_goto_blank(page)
             except Exception as e:
                 print(f"        erro: {e}, próxima loja")
-                marcar_tentativa(con, ean, loja)
+                marcar_tentativa(con, ean, nome_loja)
                 await safe_goto_blank(page)
     except Exception as e:
         print(f"        erro geral: {e}")
@@ -1293,6 +1458,12 @@ async def process_ean(page: Page, ean: str, con: sqlite3.Connection, fonte: str 
     print()
 
     produto_url, buscador, info, origem, imagem_local = None, None, None, None, None
+
+    # Somente lojas diretas, sem Google
+    if LOJAS_FALLBACK_ATIVO and fonte == "lojas":
+        hit = await _executar_lojas(page, ean, lojas_ordenadas(ean, con), con, reprocessar, sites_pausados)
+        if hit:
+            produto_url, buscador, info, origem, imagem_local = hit
 
     if not fonte or fonte == "google":
         site_filter = " OR ".join(f"site:{d}" for d in _dominios_lojas())
@@ -1355,7 +1526,7 @@ async def process_ean(page: Page, ean: str, con: sqlite3.Connection, fonte: str 
                     break
 
     # Loja específica por --fonte loja_name (sem busca Google)
-    if LOJAS_FALLBACK_ATIVO and not produto_url and fonte and fonte != "google":
+    if LOJAS_FALLBACK_ATIVO and not produto_url and fonte and fonte not in ("google", "lojas"):
         lojas = [l for l in LOJAS_FALLBACK if l["nome"] == fonte]
         hit = await _executar_lojas(page, ean, lojas, con, reprocessar, sites_pausados)
         if hit:
@@ -1467,9 +1638,9 @@ def _is_crash(exc: Exception) -> bool:
     return "crashed" in str(exc).lower() or "target closed" in str(exc).lower()
 
 
-async def _reconectar_chrome(pw, chrome_proc: subprocess.Popen):
-    """Encerra o Chrome crashado, inicia um novo e retorna (proc, page)."""
-    print("\n  ⚠ Chrome crashou — reiniciando...")
+async def _reconectar_chrome(pw, chrome_proc: subprocess.Popen, motivo: str = "crash"):
+    """Encerra o Chrome, inicia um novo e retorna (proc, page)."""
+    print(f"\n  ↺ Chrome reiniciando ({motivo})...")
     encerrar_chrome(chrome_proc)
     await asyncio.sleep(3)
     novo_proc = iniciar_chrome()
@@ -1477,7 +1648,7 @@ async def _reconectar_chrome(pw, chrome_proc: subprocess.Popen):
     browser = await pw.chromium.connect_over_cdp(CDP_URL)
     context = browser.contexts[0] if browser.contexts else await browser.new_context()
     page = await context.new_page()
-    print("  Chrome reiniciado.\n")
+    print("  Chrome pronto.\n")
     return novo_proc, page
 
 
@@ -1512,7 +1683,7 @@ async def cmd_extrair(args):
     setup_db(con)
     print_resumo_buscadores(con)
     reordenar_lojas(con)
-    pending = load_pending(con, reprocessar=args.reprocessar)
+    pending = load_pending(con, reprocessar=args.reprocessar, incluir_suspeitos=getattr(args, "incluir_suspeitos", False))
     sites_pausados: set = set()
 
     if not pending:
@@ -1538,6 +1709,9 @@ async def cmd_extrair(args):
             print(f"Conectado. Iniciando extração de {len(pending)} EANs...\n")
 
             for i, ean in enumerate(pending, 1):
+                if i > 1 and (i - 1) % REINICIO_CHROME_INTERVALO == 0:
+                    print(f"\n  ↺ Reinício programado do Chrome ({i - 1} EANs processados)...")
+                    chrome, page = await _reconectar_chrome(pw, chrome, motivo="reinício programado")
                 try:
                     await process_ean(page, ean, con, fonte=args.fonte, reprocessar=args.reprocessar, sites_pausados=sites_pausados)
                 except Exception as e:
@@ -1606,6 +1780,9 @@ def _coletar_eans_buscador(con: sqlite3.Connection, buscador: str) -> list[str]:
 async def _rebuscar_lista(page, con: sqlite3.Connection, eans: list[str], buscador: str, sites_pausados: set, start: float, total: int, offset: int, pw=None, chrome_ref: list | None = None):
     """Processa uma lista de EANs num buscador específico usando a página já aberta."""
     for i, ean in enumerate(eans, 1):
+        if i > 1 and (i - 1) % REINICIO_CHROME_INTERVALO == 0 and pw is not None and chrome_ref is not None:
+            print(f"\n  ↺ Reinício programado do Chrome ({i - 1} EANs processados)...")
+            chrome_ref[0], page = await _reconectar_chrome(pw, chrome_ref[0], motivo="reinício programado")
         try:
             await process_ean(page, ean, con, fonte=buscador, sites_pausados=sites_pausados)
         except Exception as e:
@@ -1982,7 +2159,7 @@ async def cmd_reprocessar_ean(args):
             context = browser.contexts[0] if browser.contexts else await browser.new_context()
             page = await context.new_page()
             print("Conectado.\n")
-            await process_ean(page, ean, con, reprocessar=True, sites_pausados=set())
+            await process_ean(page, ean, con, fonte=args.fonte, reprocessar=True, sites_pausados=set())
             await page.close()
     finally:
         encerrar_chrome(chrome)
@@ -1999,7 +2176,7 @@ async def cmd_reprocessar_ean(args):
 
 
 async def main():
-    fontes = ["google"] + [l["nome"] for l in LOJAS_FALLBACK]
+    fontes = ["google", "lojas"] + [l["nome"] for l in LOJAS_FALLBACK]
     parser = argparse.ArgumentParser(
         description=(
             "Busca imagens e dados de produtos por EAN em lojas brasileiras.\n"
@@ -2020,6 +2197,9 @@ async def main():
             "\n"
             "  # Forçar busca apenas pelo Google (sem fallback para lojas):\n"
             "  python extrair_dados_ean.py --fonte google\n"
+            "\n"
+            "  # Buscar somente nas lojas diretas (sem Google):\n"
+            "  python extrair_dados_ean.py --fonte lojas\n"
             "\n"
             "  # Repetir scraping de página para EANs da Ultrafarma sem imagem:\n"
             "  python extrair_dados_ean.py --rescrape-buscador ultrafarma\n"
@@ -2043,7 +2223,9 @@ async def main():
     parser.add_argument("--fonte", choices=fontes, default=None, metavar="FONTE",
                         help="Restringe a busca a uma única fonte; sem esta flag usa Google + fallback para todas as lojas")
     parser.add_argument("--reprocessar", action="store_true",
-                        help="Inclui EANs com status 'ok' na fila (re-extrai mesmo os já encontrados)")
+                        help="Inclui EANs com status 'ok' na fila (re-extrai mesmo os já encontrados); suspeitos continuam excluídos salvo com --incluir-suspeitos")
+    parser.add_argument("--incluir-suspeitos", action="store_true",
+                        help="Junto com --reprocessar: inclui também EANs com status 'suspeito' na fila")
     parser.add_argument("--rescrape-buscador", metavar="BUSCADOR",
                         help=(
                             "Re-faz apenas o scraping da página para EANs de BUSCADOR com status != ok. "
