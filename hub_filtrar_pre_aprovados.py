@@ -13,6 +13,7 @@ Evidências salvas em: evidencias/<MARCA>_<FONTE>/execucao_YYYY-MM-DD-HH-MM/<EAN
 
 import argparse
 import asyncio
+import base64
 import json
 import re
 import subprocess
@@ -102,9 +103,10 @@ class DadosProduto:
 
 @dataclass
 class ResultadoAnalise:
-    hub:        DadosProduto = field(default_factory=DadosProduto)
-    link:       DadosProduto | None = None
-    comparacao: dict = field(default_factory=dict)
+    hub:               DadosProduto = field(default_factory=DadosProduto)
+    link:              DadosProduto | None = None
+    comparacao:        dict = field(default_factory=dict)
+    validacao_imagem:  dict = field(default_factory=dict)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -367,6 +369,64 @@ async def scrape_link(
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# Validação de imagem (Claude Vision)
+# ══════════════════════════════════════════════════════════════════════════════
+
+_MIME_MAP = {".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+             ".png": "image/png",  ".webp": "image/webp"}
+
+_PROMPT_IMAGEM = (
+    "Analise esta imagem de produto cosmético e avalie cada critério abaixo.\n\n"
+    "1. produto_completo — O produto está mostrado por inteiro, sem estar cortado?\n"
+    "2. sem_elementos_extras — A imagem contém apenas a embalagem do produto, "
+    "sem outros objetos, pessoas, sombras excessivas ou elementos decorativos?\n"
+    "3. frente_produto — A imagem mostra a frente do produto (não o verso nem lateral)?\n"
+    "4. fundo_claro — O fundo é claro (branco, cinza claro, cinza ou outra cor clara)?\n\n"
+    "Responda APENAS com JSON válido, sem texto adicional:\n"
+    '{"produto_completo":{"ok":true,"obs":""},'
+    '"sem_elementos_extras":{"ok":true,"obs":""},'
+    '"frente_produto":{"ok":true,"obs":""},'
+    '"fundo_claro":{"ok":true,"obs":""}}'
+)
+
+
+async def validar_imagem_hub(image_path: Path) -> dict:
+    """Avalia qualidade da imagem do hub via Claude Vision."""
+    import anthropic
+
+    if not image_path.exists():
+        return {"erro": "arquivo não encontrado"}
+
+    mime  = _MIME_MAP.get(image_path.suffix.lower(), "image/jpeg")
+    dados = base64.standard_b64encode(image_path.read_bytes()).decode()
+
+    def _chamar():
+        client = anthropic.Anthropic()
+        return client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=512,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {"type": "image",
+                     "source": {"type": "base64", "media_type": mime, "data": dados}},
+                    {"type": "text", "text": _PROMPT_IMAGEM},
+                ],
+            }],
+        )
+
+    try:
+        resp    = await asyncio.to_thread(_chamar)
+        texto   = resp.content[0].text.strip()
+        m       = re.search(r"\{.*\}", texto, re.DOTALL)
+        criterios = json.loads(m.group()) if m else {}
+        aprovada  = bool(criterios) and all(v.get("ok") for v in criterios.values())
+        return {"aprovada": aprovada, "criterios": criterios}
+    except Exception as e:
+        return {"erro": str(e)}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # Comparação
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -377,8 +437,8 @@ def _norm(texto: str) -> str:
 def comparar(hub: DadosProduto, link: DadosProduto) -> dict:
     resultado = {}
 
-    # Campos simples
-    for campo in ["nome", "categoria", "subcategoria"]:
+    # Nome: compara hub vs site
+    for campo in ["nome"]:
         v_hub  = _norm(getattr(hub,  campo, ""))
         v_link = _norm(getattr(link, campo, ""))
         if not v_link:
@@ -389,27 +449,36 @@ def comparar(hub: DadosProduto, link: DadosProduto) -> dict:
             resultado[campo] = {"status": "diferente", "hub": getattr(hub, campo), "link": getattr(link, campo)}
         print(f"    {campo:15s} → {resultado[campo]['status']}")
 
+    # Categoria e subcategoria: valida apenas se preenchido no hub
+    for campo in ["categoria", "subcategoria"]:
+        v_hub = _norm(getattr(hub, campo, ""))
+        status = "preenchido" if v_hub else "vazio"
+        resultado[campo] = {"status": status, "hub": getattr(hub, campo)}
+        print(f"    {campo:15s} → {status}")
+
     # Ingredientes: comparação 3 fontes (Scraping × DB × Site) + ordenação
     scraping = hub.ingredientes
     db       = hub.ingredientes_db
     site     = link.ingredientes if link else ""
-    cmp_sd   = _cmp_ing(scraping, db)
-    cmp_ss   = _cmp_ing(scraping, site)
-    cmp_ds   = _cmp_ing(db, site)
-    all_igual = cmp_sd["conteudo_igual"] and cmp_sd["ordem_igual"] \
-                and cmp_ss["conteudo_igual"] and cmp_ss["ordem_igual"] \
-                and cmp_ds["conteudo_igual"] and cmp_ds["ordem_igual"]
-    status_ing = "igual" if all_igual else ("sem_dados_link" if not site else "diferente")
+    cmp_ss      = _cmp_ing(scraping, site)
+    cmp_sd      = _cmp_ing(scraping, db)
+    status_site = ("sem_dados_link" if not site
+                   else "igual" if cmp_ss["conteudo_igual"] and cmp_ss["ordem_igual"]
+                   else "diferente")
+    status_db   = ("sem_dados_db"   if not db
+                   else "igual" if cmp_sd["conteudo_igual"] and cmp_sd["ordem_igual"]
+                   else "diferente")
     resultado["ingredientes"] = {
-        "status":           status_ing,
+        "status_site":      status_site,
+        "status_db":        status_db,
         "scraping":         scraping,
         "db":               db,
         "site":             site,
-        "scraping_vs_db":   cmp_sd,
         "scraping_vs_site": cmp_ss,
-        "db_vs_site":       cmp_ds,
+        "scraping_vs_db":   cmp_sd,
     }
-    print(f"    {'ingredientes':15s} → {status_ing}")
+    print(f"    {'ing×site':15s} → {status_site}")
+    print(f"    {'ing×db':15s} → {status_db}")
     return resultado
 
 
@@ -418,7 +487,14 @@ def comparar(hub: DadosProduto, link: DadosProduto) -> dict:
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _ing_lista(texto: str) -> list[str]:
-    return [re.sub(r"\s+", " ", i.strip().lower()) for i in texto.split(",") if i.strip()]
+    result = []
+    for item in texto.split(","):
+        norm = item.strip().lower()
+        norm = re.sub(r"\s*\(.*?\)\s*", " ", norm)  # remove (...) e espaços ao redor
+        norm = re.sub(r"\s+", " ", norm).strip()
+        if norm:
+            result.append(norm)
+    return result
 
 
 def _cmp_ing(a: str, b: str) -> dict:
@@ -449,36 +525,49 @@ def _ing_col(titulo: str, texto: str, outras: list[set]) -> str:
     return f'<div><strong>{titulo}</strong><p>{", ".join(parts)}</p></div>'
 
 
-def _ing_html(scraping: str, db: str, site: str) -> str:
-    """Renderiza 3 colunas de ingredientes com destaque de diferenças e indicador de ordem."""
-    ls, ld, lsite = set(_ing_lista(scraping)), set(_ing_lista(db)), set(_ing_lista(site))
-    cmp_sd  = _cmp_ing(scraping, db)
-    cmp_ss  = _cmp_ing(scraping, site)
-    cmp_ds  = _cmp_ing(db, site)
+def _ing_html(scraping: str, db: str, site: str) -> tuple[str, str]:
+    """Retorna (html_fase1, html_fase2) com colunas de ingredientes destacadas."""
+    ls    = set(_ing_lista(scraping))
+    ld    = set(_ing_lista(db))
+    lsite = set(_ing_lista(site))
 
-    def _badge_ordem(cmp: dict, label_a: str, label_b: str) -> str:
-        if not cmp["conteudo_igual"]:
-            return ""
-        cor  = "badge-ok" if cmp["ordem_igual"] else "badge-diff"
-        txt  = f"ordem igual" if cmp["ordem_igual"] else f"ordem diferente"
-        return f'<span class="badge {cor}" style="font-size:.65rem">{label_a}↔{label_b}: {txt}</span> '
-
-    badges = (
-        _badge_ordem(cmp_sd,  "Scrap", "DB")
-        + _badge_ordem(cmp_ss, "Scrap", "Site")
-        + _badge_ordem(cmp_ds, "DB",    "Site")
-    )
-
-    col_s  = _ing_col("Original (Scraping)", scraping, [ld, lsite])
-    col_d  = _ing_col("Vinculados (DB)",     db,       [ls, lsite])
-    col_st = _ing_col("Site",                site,     [ls, ld])
-
-    return (
-        f'<div class="ing-badges">{badges}</div>'
+    fase1 = (
         '<div class="ing-grid">'
-        f'{col_s}{col_d}{col_st}'
-        "</div>"
+        + _ing_col("Original (Scraping)", scraping, [lsite])
+        + _ing_col("Site",                site,     [ls])
+        + "</div>"
     )
+    fase2 = (
+        '<div class="ing-grid">'
+        + _ing_col("Original (Scraping)", scraping, [ld])
+        + _ing_col("Vinculados (DB)",     db,       [ls])
+        + "</div>"
+    )
+    return fase1, fase2
+
+
+def _comp_statuses(comp: dict) -> list[str]:
+    """Retorna lista plana de todos os statuses de um dict de comparação."""
+    result = []
+    for v in comp.values():
+        if "status_site" in v or "status_db" in v:
+            if "status_site" in v:
+                result.append(v["status_site"])
+            if "status_db" in v:
+                result.append(v["status_db"])
+        elif "status" in v:
+            result.append(v["status"])
+    return result
+
+
+_IMG_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+
+def _find_img(prod_dir: Path, stem: str) -> Path | None:
+    """Retorna o primeiro arquivo prod_dir/stem.* com extensão de imagem, ou None."""
+    for f in prod_dir.glob(f"{stem}.*"):
+        if f.suffix.lower() in _IMG_EXTS:
+            return f
+    return None
 
 
 def gerar_relatorio_html(
@@ -493,6 +582,9 @@ def gerar_relatorio_html(
         "igual":          '<span class="badge badge-ok">igual</span>',
         "diferente":      '<span class="badge badge-diff">diferente</span>',
         "sem_dados_link": '<span class="badge badge-nd">sem dados</span>',
+        "preenchido":     '<span class="badge badge-ok">preenchido</span>',
+        "vazio":          '<span class="badge badge-diff">vazio</span>',
+        "sem_dados_db":   '<span class="badge badge-nd">sem dados DB</span>',
     }
     CAMPOS_LABEL = {
         "nome":         "Nome",
@@ -507,8 +599,8 @@ def gerar_relatorio_html(
         if not r.get("link"):
             contagem["sem_link"] += 1
         else:
-            statuses = [v["status"] for v in r.get("comparacao", {}).values()]
-            if all(s == "igual" for s in statuses):
+            statuses = _comp_statuses(r.get("comparacao", {}))
+            if all(s in ("igual", "preenchido") for s in statuses):
                 contagem["igual"] += 1
             else:
                 contagem["diferente"] += 1
@@ -529,14 +621,16 @@ def gerar_relatorio_html(
             screenshots_links += f'&ensp;<a href="{modal_img}" target="_blank">📷 Hub</a>'
         if link_img:
             screenshots_links += f'&ensp;<a href="{link_img}" target="_blank">📷 Site</a>'
-        img_hub_link  = f'&ensp;<a href="{ean}/produto_hub.jpg"  target="_blank">🖼 Img Hub</a>'  if ean and (ev_dir / ean / "produto_hub.jpg").exists()  else ""
-        img_site_link = f'&ensp;<a href="{ean}/produto_site.jpg" target="_blank">🖼 Img Site</a>' if ean and (ev_dir / ean / "produto_site.jpg").exists() else ""
+        _hub_f  = _find_img(ev_dir / ean, "produto_hub")  if ean else None
+        _site_f = _find_img(ev_dir / ean, "produto_site") if ean else None
+        img_hub_link  = f'&ensp;<a href="{ean}/{_hub_f.name}"  target="_blank">🖼 Img Hub</a>'  if _hub_f  else ""
+        img_site_link = f'&ensp;<a href="{ean}/{_site_f.name}" target="_blank">🖼 Img Site</a>' if _site_f else ""
 
         # Determina status geral do produto
-        statuses = [v["status"] for v in comp.values()] if comp else []
+        statuses = _comp_statuses(comp) if comp else []
         if not link:
             card_cls = "card-nolink"
-        elif all(s == "igual" for s in statuses):
+        elif all(s in ("igual", "preenchido") for s in statuses):
             card_cls = "card-ok"
         else:
             card_cls = "card-diff"
@@ -545,34 +639,90 @@ def gerar_relatorio_html(
         rows = ""
         for campo, label in CAMPOS_LABEL.items():
             c = comp.get(campo, {})
-            status = c.get("status", "—")
-            badge  = STATUS_BADGE.get(status, f'<span class="badge">{status}</span>')
             v_hub  = hub.get(campo, "")
             v_link = link.get(campo, "") if link else ""
 
             if campo == "ingredientes":
-                valores = _ing_html(
+                fase1_html, fase2_html = _ing_html(
                     c.get("scraping", v_hub),
                     c.get("db", ""),
                     c.get("site", v_link),
                 )
-            elif status == "diferente":
-                valores = (
-                    f'<div class="val-pair">'
-                    f'<div><small>Hub</small><br>{v_hub}</div>'
-                    f'<div><small>Site</small><br>{v_link}</div>'
-                    f'</div>'
+                badge_site = STATUS_BADGE.get(c.get("status_site", ""), "")
+                badge_db   = STATUS_BADGE.get(c.get("status_db",   ""), "")
+                rows += (
+                    f"<tr>"
+                    f"<td class='campo'>Ingredientes<br>"
+                    f"<small class='fase-label'>Fase 1 — Site</small></td>"
+                    f"<td>{fase1_html}</td>"
+                    f"<td class='status-col'>{badge_site}</td>"
+                    f"</tr>"
+                    f"<tr>"
+                    f"<td class='campo'>Ingredientes<br>"
+                    f"<small class='fase-label'>Fase 2 — DB</small></td>"
+                    f"<td>{fase2_html}</td>"
+                    f"<td class='status-col'>{badge_db}</td>"
+                    f"</tr>"
                 )
             else:
-                valores = v_hub or v_link or "—"
+                status = c.get("status", "—")
+                badge  = STATUS_BADGE.get(status, f'<span class="badge">{status}</span>')
+                if status == "diferente":
+                    valores = (
+                        f'<div class="val-pair">'
+                        f'<div><small>Hub</small><br>{v_hub}</div>'
+                        f'<div><small>Site</small><br>{v_link}</div>'
+                        f'</div>'
+                    )
+                else:
+                    valores = v_hub or v_link or "—"
+                rows += (
+                    f"<tr>"
+                    f"<td class='campo'>{label}</td>"
+                    f"<td>{valores}</td>"
+                    f"<td class='status-col'>{badge}</td>"
+                    f"</tr>"
+                )
 
-            rows += (
-                f"<tr>"
-                f"<td class='campo'>{label}</td>"
-                f"<td>{valores}</td>"
-                f"<td class='status-col'>{badge}</td>"
-                f"</tr>"
+        # ── Linha de validação de imagem ─────────────────────────────────────
+        val_img = r.get("validacao_imagem") or {}
+        if val_img.get("erro"):
+            rows_img = (
+                f"<tr><td class='campo'>Imagem Hub</td>"
+                f"<td><span style='color:#94a3b8;font-style:italic'>{val_img['erro']}</span></td>"
+                f"<td class='status-col'><span class='badge badge-nd'>erro</span></td></tr>"
             )
+        elif val_img.get("criterios"):
+            _CRIT_LABEL = {
+                "produto_completo":    "produto completo",
+                "sem_elementos_extras":"sem extras",
+                "frente_produto":      "frente",
+                "fundo_claro":         "fundo claro",
+            }
+            chips = ""
+            obs_list = []
+            for chave, label_c in _CRIT_LABEL.items():
+                crit = val_img["criterios"].get(chave, {})
+                ok   = crit.get("ok", False)
+                obs  = crit.get("obs", "").strip()
+                cor  = "badge-ok" if ok else "badge-diff"
+                icone = "✓" if ok else "✗"
+                chips += f'<span class="badge {cor}" style="font-size:.72rem">{icone} {label_c}</span> '
+                if not ok and obs:
+                    obs_list.append(f"{label_c}: {obs}")
+            obs_html = (f'<div style="font-size:.75rem;color:#64748b;margin-top:.3rem">'
+                        + " · ".join(obs_list) + "</div>") if obs_list else ""
+            status_geral = "aprovada" if val_img.get("aprovada") else "reprovada"
+            cor_geral    = "badge-ok" if val_img.get("aprovada") else "badge-diff"
+            rows_img = (
+                f"<tr><td class='campo'>Imagem Hub</td>"
+                f"<td>{chips}{obs_html}</td>"
+                f"<td class='status-col'><span class='badge {cor_geral}'>{status_geral}</span></td></tr>"
+            )
+        else:
+            rows_img = ""
+
+        rows = rows_img + rows
 
         fonte_link = link.get("fonte", "") if link else ""
         link_url   = hub.get("link", "")
@@ -660,7 +810,8 @@ def gerar_relatorio_html(
   table {{ width: 100%; border-collapse: collapse; font-size: .88rem; }}
   thead th {{ background: #f8fafc; padding: .6rem 1rem; text-align: left; font-size: .75rem; text-transform: uppercase; color: #64748b; letter-spacing: .05em; border-top: 1px solid #e2e8f0; }}
   tbody td {{ padding: .7rem 1rem; vertical-align: top; border-top: 1px solid #f1f5f9; }}
-  .campo {{ font-weight: 600; width: 110px; white-space: nowrap; color: #475569; }}
+  .campo {{ font-weight: 600; width: 130px; color: #475569; }}
+  .fase-label {{ font-weight: 400; font-size: .72rem; color: #94a3b8; }}
   .status-col {{ width: 110px; }}
 
   /* ── Badges ── */
@@ -674,8 +825,8 @@ def gerar_relatorio_html(
   .val-pair small {{ font-size: .7rem; text-transform: uppercase; color: #94a3b8; font-weight: 700; }}
 
   /* ── Ingredientes ── */
-  .ing-badges {{ padding: .5rem 1rem .25rem; display: flex; gap: .4rem; flex-wrap: wrap; }}
-  .ing-grid {{ display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .75rem; padding: 0 1rem .75rem; }}
+  .ing-fase-header {{ padding: .5rem 1rem .2rem; font-size: .72rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: .04em; display: flex; align-items: center; gap: .5rem; }}
+  .ing-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; padding: 0 1rem .75rem; }}
   .ing-grid strong {{ font-size: .75rem; text-transform: uppercase; color: #94a3b8; letter-spacing: .05em; display: block; margin-bottom: .3rem; }}
   .ing-grid p {{ line-height: 1.7; }}
   .ing-diff {{ background: #fef3c7; border-radius: 3px; padding: 0 2px; }}
@@ -860,10 +1011,17 @@ async def main(args: argparse.Namespace) -> None:
                 print(f"  nome:         {dados_hub.nome}")
                 print(f"  categoria:    {dados_hub.categoria} / {dados_hub.subcategoria}")
                 print(f"  link:         {dados_hub.link or '(sem link)'}")
+                validacao_imagem: dict = {}
                 if dados_hub.imagem:
                     await baixar_imagem(page, dados_hub.imagem, prod_dir / "produto_hub")
+                    img_hub_path = _find_img(prod_dir, "produto_hub")
+                    if img_hub_path:
+                        print("  🔍 Validando imagem hub…")
+                        validacao_imagem = await validar_imagem_hub(img_hub_path)
+                        status_val = "aprovada" if validacao_imagem.get("aprovada") else validacao_imagem.get("erro", "reprovada")
+                        print(f"  📸 Imagem: {status_val}")
 
-                resultado = ResultadoAnalise(hub=dados_hub)
+                resultado = ResultadoAnalise(hub=dados_hub, validacao_imagem=validacao_imagem)
 
                 if dados_hub.link:
                     dados_link = await scrape_link(context, dados_hub.link, prod_dir)
