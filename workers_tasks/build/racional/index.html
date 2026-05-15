@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Racional · Instruções para Workers — BeClean · BASE/labs</title>
+<meta name="description" content="Manual operacional dos workers BASE/labs alocados ao projeto BeClean — validação no Hub.">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500;1,600&display=swap">
+<link rel="icon" href="https://novosite.baselabs.com.br/favicon-32.webp" sizes="32x32" type="image/webp">
+<style>
+:root {
+  --bg: #f6f7f9;
+  --bg-1: #ffffff;
+  --bg-2: #eef0f4;
+  --fg: #14182a;
+  --fg-2: #404862;
+  --fg-3: #6a7488;
+  --brand: #3654ae;
+  --brand-2: #2a4490;
+  --brand-coral: #ff6e5a;
+  --line: #acb8ca;
+  --line-soft: #d1d7e0;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --r-3: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 15px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+.shell { width: min(960px, 100% - 48px); margin-inline: auto; }
+.shell-wide { width: min(1200px, 100% - 48px); margin-inline: auto; }
+
+/* Header */
+.site-header {
+  position: sticky; top: 0; z-index: 80;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: saturate(140%) blur(8px);
+  -webkit-backdrop-filter: saturate(140%) blur(8px);
+  border-bottom: 1px solid var(--line-soft);
+}
+.site-header .row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; height: 64px;
+}
+.site-header img { height: 28px; width: auto; }
+.site-header .crumbs { font-size: 12px; color: var(--fg-3); letter-spacing: 0.04em; }
+.site-header .crumbs a { color: var(--fg-2); text-decoration: none; }
+.site-header .crumbs a:hover { color: var(--brand); }
+
+/* Page nav (top tabs) */
+.page-nav {
+  position: sticky; top: 64px; z-index: 70;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--line-soft);
+}
+.page-nav ul {
+  display: flex; gap: 0;
+  margin: 0; padding: 0;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.page-nav ul::-webkit-scrollbar { display: none; }
+.page-nav li { flex-shrink: 0; }
+.page-nav li::before { content: none; }
+.page-nav a {
+  display: block;
+  padding: 14px 24px;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--fg-3);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+.page-nav a:hover { color: var(--fg-2); }
+.page-nav a.active { color: var(--brand); border-bottom-color: var(--brand); }
+
+/* Cover */
+.cover {
+  padding: clamp(48px, 8vw, 88px) 0 clamp(28px, 5vw, 56px);
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--bg-1);
+}
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--fg-3); letter-spacing: 0.04em;
+  text-transform: lowercase; margin-bottom: 20px;
+}
+.eyebrow .bar { width: 24px; height: 2px; background: var(--brand); display: inline-block; }
+.cover h1 {
+  font-family: var(--mono);
+  font-size: clamp(32px, 5.4vw, 60px);
+  font-weight: 700;
+  line-height: 1.0;
+  letter-spacing: -0.03em;
+  margin: 0 0 24px;
+  color: var(--fg);
+  max-width: 22ch;
+}
+.cover h1 em { font-style: italic; font-weight: 400; color: var(--brand); }
+.cover .meta {
+  margin-top: 36px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px 32px;
+  font-size: 13px;
+}
+.cover .meta .k { color: var(--fg-3); text-transform: lowercase; letter-spacing: 0.04em; }
+.cover .meta .v { color: var(--fg); margin-top: 4px; }
+.cover .meta a { color: var(--brand); text-decoration: none; }
+.cover .meta a:hover { text-decoration: underline; }
+
+/* Content + sidebar layout */
+.content { padding: clamp(40px, 6vw, 80px) 0 clamp(56px, 8vw, 120px); }
+.content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  gap: 64px;
+  align-items: start;
+}
+.content-body { min-width: 0; }
+
+/* Content typography */
+.content-body h1 { display: none; }
+.content-body h2 {
+  font-family: var(--mono);
+  font-size: clamp(22px, 2.6vw, 30px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 64px 0 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line-soft);
+  color: var(--fg);
+  scroll-margin-top: 130px;
+}
+.content-body > h2:first-of-type { margin-top: 0; border-top: 0; padding-top: 0; }
+.content-body h3 {
+  font-family: var(--mono);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 36px 0 12px;
+  color: var(--fg);
+  scroll-margin-top: 130px;
+}
+.content-body h3::before { content: "// "; color: var(--brand); font-weight: 400; }
+.content-body h4 {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+  color: var(--fg-2);
+  margin: 24px 0 8px;
+  scroll-margin-top: 130px;
+}
+.content-body p, .content-body li { font-size: 15px; color: var(--fg-2); line-height: 1.7; }
+.content-body p { margin: 12px 0; }
+.content-body ul, .content-body ol { padding-left: 24px; margin: 12px 0; }
+.content-body ul li { list-style: none; position: relative; }
+.content-body ul li::before { content: "—"; position: absolute; left: -22px; color: var(--brand); }
+.content-body ol { padding-left: 28px; }
+.content-body ol li { padding-left: 4px; }
+.content-body ol li::marker { color: var(--brand); font-weight: 500; }
+.content-body strong { color: var(--fg); font-weight: 600; }
+.content-body em { color: var(--fg); font-style: italic; }
+.content-body a {
+  color: var(--brand); text-decoration: underline;
+  text-decoration-thickness: 1px; text-underline-offset: 2px;
+}
+.content-body a:hover { color: var(--brand-2); }
+.content-body code {
+  font-family: var(--mono);
+  background: var(--bg-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.92em;
+  color: var(--fg);
+}
+.content-body pre {
+  background: #0e1224;
+  border: 1px solid var(--brand-2);
+  border-radius: var(--r-3);
+  padding: 18px 22px;
+  overflow-x: auto;
+  margin: 20px 0;
+  position: relative;
+}
+.content-body pre::before {
+  content: "// prompt";
+  position: absolute; top: -10px; left: 16px;
+  background: #0e1224;
+  padding: 0 8px;
+  font-size: 11px;
+  color: #9edc37;
+  letter-spacing: 0.06em;
+}
+.content-body pre code {
+  background: transparent; border: 0; padding: 0;
+  color: #d1d7e0; font-size: 13px; line-height: 1.65;
+  white-space: pre-wrap;
+}
+.content-body hr { display: none; }
+.content-body blockquote {
+  border-left: 2px solid var(--brand);
+  background: var(--bg-1);
+  padding: 14px 20px;
+  margin: 16px 0;
+  color: var(--fg-2);
+  border-radius: 0 var(--r-3) var(--r-3) 0;
+}
+.content-body blockquote p { margin: 0; }
+
+/* Screenshot slots (text placeholder) */
+.screenshot-slot {
+  margin: 12px 0;
+  padding: 14px 18px;
+  background: var(--bg-1);
+  border: 1px dashed var(--line);
+  border-radius: var(--r-3);
+  display: flex; gap: 14px; align-items: baseline;
+  font-size: 13px;
+}
+.screenshot-slot .ss-tag { color: var(--brand); font-weight: 500; letter-spacing: 0.04em; flex-shrink: 0; }
+.screenshot-slot .ss-text { color: var(--fg-3); font-style: italic; }
+
+/* Screenshot slots (with image) */
+figure.screenshot-slot.has-img {
+  display: block;
+  margin: 20px 0;
+  padding: 0;
+  background: var(--bg-1);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-3);
+  overflow: hidden;
+}
+figure.screenshot-slot.has-img .ss-cap {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  padding: 12px 16px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 12.5px;
+}
+figure.screenshot-slot.has-img .ss-cap .ss-tag {
+  color: var(--brand); font-weight: 500;
+  letter-spacing: 0.04em; flex-shrink: 0;
+}
+figure.screenshot-slot.has-img .ss-cap .ss-text {
+  color: var(--fg-2); font-style: normal;
+}
+figure.screenshot-slot.has-img img {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #fff;
+}
+
+/* Note callouts */
+.note-callout {
+  display: flex; gap: 16px;
+  padding: 14px 18px;
+  margin: 16px 0;
+  background: #fff8f3;
+  border-left: 3px solid var(--brand-coral);
+  border-radius: 0 var(--r-3) var(--r-3) 0;
+}
+.note-callout .nc-tag {
+  color: var(--brand-coral); font-size: 12px;
+  letter-spacing: 0.04em; flex-shrink: 0; padding-top: 2px;
+}
+.note-callout .nc-body { color: var(--fg-2); font-size: 14px; line-height: 1.6; }
+
+/* Aviso callouts (navigation hint — yellow, bold) */
+.aviso-callout {
+  display: flex; gap: 16px;
+  padding: 14px 18px;
+  margin: 24px 0 8px;
+  background: #fffbe6;
+  border-left: 3px solid #e6a800;
+  border-radius: 0 var(--r-3) var(--r-3) 0;
+}
+.aviso-callout .av-tag {
+  color: #b37f00; font-size: 12px;
+  letter-spacing: 0.04em; flex-shrink: 0; padding-top: 2px; font-weight: 500;
+}
+.aviso-callout .av-body { color: var(--fg); font-size: 14px; line-height: 1.6; font-weight: 600; }
+
+/* Warning callouts */
+.warning-callout {
+  display: flex; gap: 16px;
+  padding: 14px 18px;
+  margin: 16px 0;
+  background: #fff2f2;
+  border-left: 3px solid #d93025;
+  border-radius: 0 var(--r-3) var(--r-3) 0;
+}
+.warning-callout .wn-tag {
+  color: #d93025; font-size: 12px;
+  letter-spacing: 0.04em; flex-shrink: 0; padding-top: 2px; font-weight: 500;
+}
+.warning-callout .wn-body { color: var(--fg); font-size: 14px; line-height: 1.6; font-weight: 500; }
+
+/* Evidence callouts */
+.evidence-callout {
+  display: flex; gap: 16px;
+  padding: 14px 18px;
+  margin: 24px 0 8px;
+  background: #fffbe6;
+  border-left: 3px solid #e6a800;
+  border-radius: 0 var(--r-3) var(--r-3) 0;
+}
+.evidence-callout .ev-tag {
+  color: #b37f00; font-size: 12px;
+  letter-spacing: 0.04em; flex-shrink: 0; padding-top: 2px; font-weight: 500;
+}
+.evidence-callout .ev-body { color: var(--fg-2); font-size: 14px; line-height: 1.6; }
+
+/* Side TOC */
+.toc-side {
+  position: sticky;
+  top: 140px;
+  align-self: start;
+  font-size: 13px;
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.toc-side .toc-side-inner > .eyebrow { margin-bottom: 12px; }
+.toc-side ol, .toc-side ul { list-style: none; padding: 0; margin: 0; }
+.toc-side li { margin: 0; padding: 0; }
+.toc-side li::before { content: none; }
+.toc-side a {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 0 6px 12px;
+  margin-left: -12px;
+  border-left: 2px solid transparent;
+  color: var(--fg-3);
+  text-decoration: none;
+  line-height: 1.45;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.toc-side a:hover { color: var(--fg-2); }
+.toc-side a.active { color: var(--brand); border-left-color: var(--brand); }
+.toc-side .toc-h2 > a { font-weight: 500; color: var(--fg-2); }
+.toc-side .toc-h2 > a.active { color: var(--brand); }
+.toc-side .toc-h3 > a {
+  padding-left: 28px;
+  margin-left: -12px;
+  font-size: 12.5px;
+}
+.toc-side .toc-h4 > a {
+  padding-left: 44px;
+  margin-left: -12px;
+  font-size: 12px;
+  color: var(--fg-3);
+}
+.toc-side .toc-top {
+  display: inline-block;
+  margin-top: 20px;
+  font-size: 12px;
+  color: var(--fg-3);
+  text-decoration: none;
+  letter-spacing: 0.04em;
+}
+.toc-side .toc-top:hover { color: var(--brand); }
+
+/* Footer */
+.site-footer {
+  border-top: 1px solid var(--line-soft);
+  background: var(--bg-1);
+  padding: 48px 0 56px;
+  font-size: 13px;
+  color: var(--fg-3);
+}
+.site-footer .row {
+  display: flex; gap: 24px; flex-wrap: wrap;
+  justify-content: space-between; align-items: center;
+}
+.site-footer img { height: 22px; opacity: 0.85; }
+.site-footer .legal { display: flex; gap: 16px; flex-wrap: wrap; }
+.site-footer a { color: var(--fg-2); text-decoration: none; }
+.site-footer a:hover { color: var(--brand); }
+
+/* Page footer nav (prev/next) */
+.page-footer-nav {
+  margin-top: 80px;
+  padding-top: 32px;
+  border-top: 1px solid var(--line-soft);
+  display: flex; gap: 16px;
+  justify-content: space-between; flex-wrap: wrap;
+}
+.page-footer-nav a {
+  text-decoration: none;
+  color: var(--fg-2);
+  font-size: 13px;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 12px 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-3);
+  background: var(--bg-1);
+  min-width: 200px;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.page-footer-nav a:hover { border-color: var(--brand); color: var(--brand); }
+.page-footer-nav .pfn-k { font-size: 11px; color: var(--fg-3); letter-spacing: 0.04em; }
+.page-footer-nav .pfn-prev { text-align: left; }
+.page-footer-nav .pfn-next { text-align: right; margin-left: auto; }
+.page-footer-nav .pfn-next .pfn-k { text-align: right; }
+
+/* Categories table */
+.cat-heading {
+  font-size: clamp(18px, 2vw, 24px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 56px 0 14px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line-soft);
+  color: var(--fg);
+  scroll-margin-top: 130px;
+}
+.content-body > .cat-heading:first-of-type { margin-top: 0; border-top: 0; padding-top: 0; }
+.cat-filter-wrap {
+  margin-bottom: 32px;
+}
+.cat-filter {
+  width: 100%;
+  max-width: 420px;
+  padding: 10px 14px;
+  font-family: var(--mono);
+  font-size: 13px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  color: var(--fg);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.cat-filter:focus { border-color: var(--brand); }
+.cat-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.cat-table thead th {
+  text-align: left;
+  padding: 8px 14px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-soft);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  font-weight: 500;
+}
+.cat-table tbody tr { transition: background 0.1s; }
+.cat-table tbody tr:hover { background: var(--bg-2); }
+.cat-table td {
+  padding: 9px 14px;
+  border: 1px solid var(--line-soft);
+  vertical-align: top;
+  line-height: 1.55;
+}
+.cat-sub {
+  width: 220px;
+  font-weight: 500;
+  color: var(--fg);
+  white-space: nowrap;
+}
+.cat-examples { color: var(--fg-3); }
+.cat-hidden { display: none; }
+
+/* Generic content tables (e.g. Problemas Comuns) */
+.content-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin: 24px 0 32px;
+  border-radius: var(--r-3);
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+}
+.content-body table thead th {
+  text-align: left;
+  padding: 12px 18px;
+  background: var(--fg);
+  color: var(--bg-1);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  border-bottom: 2px solid var(--brand);
+}
+.content-body table tbody tr:nth-child(odd) {
+  background: var(--bg-1);
+}
+.content-body table tbody tr:nth-child(even) {
+  background: var(--bg-2);
+}
+.content-body table tbody tr:hover {
+  background: #dde1ea;
+}
+.content-body table td {
+  padding: 14px 18px;
+  vertical-align: top;
+  line-height: 1.65;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--fg);
+}
+.content-body table td:first-child {
+  font-weight: 600;
+  color: var(--brand-2);
+  white-space: nowrap;
+  width: 28%;
+}
+.content-body table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+@media (max-width: 1024px) {
+  .content-grid { grid-template-columns: 1fr; gap: 0; }
+  .toc-side { display: none; }
+  .page-nav { top: 64px; }
+  .content-body h2, .content-body h3 { scroll-margin-top: 130px; }
+}
+@media (max-width: 640px) {
+  body { font-size: 14px; }
+  .shell, .shell-wide { width: min(640px, 100% - 32px); }
+  .cover h1 { font-size: 30px; }
+  .content-body h2 { font-size: 21px; margin-top: 48px; }
+  .content-body h3 { font-size: 16px; }
+  .page-nav a { padding: 12px 16px; }
+}
+@media print {
+  .site-header, .page-nav, .site-footer, .toc-side, .page-footer-nav { display: none; }
+  .content-grid { grid-template-columns: 1fr; }
+  body { background: white; }
+  .content-body pre { background: #f3f4f8; color: #14182a; border-color: var(--line-soft); }
+  .content-body pre::before { background: #f3f4f8; color: var(--brand-2); }
+  .content-body pre code { color: #14182a; }
+}
+</style>
+</head>
+<body>
+<header class="site-header">
+  <div class="shell-wide row">
+    <a href="https://novosite.baselabs.com.br/" aria-label="BASE/labs">
+      <img src="https://novosite.baselabs.com.br/logo-azul.webp" alt="BASE/labs">
+    </a>
+    <div class="crumbs">
+      <a href="https://novosite.baselabs.com.br/">base/labs</a>
+      &nbsp;/&nbsp; beclean
+      &nbsp;/&nbsp; instruções workers
+    </div>
+  </div>
+</header>
+<nav class="page-nav" aria-label="Páginas do manual">
+  <div class="shell-wide">
+    <ul>
+      <li><a href="/beclean/instrucoes_workers/" class="">Início</a></li>
+      <li><a href="/beclean/instrucoes_workers/regras/" class="">Regras</a></li>
+      <li><a href="/beclean/instrucoes_workers/tarefa-1/" class="">Tarefa 1</a></li>
+      <li><a href="/beclean/instrucoes_workers/categorias/" class="">Categorias</a></li>
+      <li><a href="/beclean/instrucoes_workers/problemas/" class="">FAQ</a></li>
+    </ul>
+  </div>
+</nav>
+<section class="cover">
+  <div class="shell-wide">
+    <div class="eyebrow"><span class="bar"></span>anexo interno · gestor de contratos</div>
+    <h1><em>Racional</em><br>Estimativas de tempo.</h1>
+    
+  </div>
+</section>
+<main class="content">
+  <div class="shell-wide content-grid">
+    <article class="content-body">
+<h2 id="sec-racional">1. Racional das estimativas de tempo</h2>
+<div class="note-callout"><span class="nc-tag">// nota</span><div class="nc-body">Esta seção é interna do gestor de contratos —
+não está vinculada na navegação principal do manual. Serve para calibrar
+metas de produtividade no início do projeto. Os números aqui são
+<strong>estimativas a priori</strong>; a versão definitiva nasce depois
+das primeiras duas semanas de execução, quando a coluna "Tempo gasto
+(min)" da planilha de controle de cada worker passa a alimentar a base
+real.</div></div>
+<h3 id="metodologia">1.1. Metodologia</h3>
+<p>A estimativa parte da decomposição de cada tarefa nos passos
+descritos nas seções 7 (Scraping) e 8 (Coleta de Rua). Para cada passo,
+atribuí uma faixa <code>[mínimo, máximo]</code> em segundos com base em
+duas referências:</p>
+<ul>
+<li><strong>Tempo de operação de UI</strong> (clicar, esperar
+carregamento, ler toast): tipicamente 10–30 s</li>
+<li><strong>Tempo de leitura/decisão</strong> (comparar nome, validar
+EAN, interpretar a conclusão da IA, comparar ingrediente com rótulo):
+tipicamente 15–180 s, dependendo do volume de texto e da carga
+cognitiva</li>
+</ul>
+<p>A soma das faixas por passo dá a estimativa por produto. Variações de
+cenário (revisão, edição de categoria, rótulo difícil) entram como
+acréscimos sobre a base.</p>
+<p><strong>Premissas que precisam ser validadas em campo:</strong></p>
+<ul>
+<li><strong>Tarefa 1 — mix de outcomes:</strong> 70% aprovados direto,
+20% precisam de ajuste de categoria, 10% vão para revisão</li>
+<li><strong>Tarefa 2 — esforço médio:</strong> ~5 ingredientes pouco
+confiáveis a corrigir por produto; ordem dos ingredientes parcialmente
+fora de posição (ajuste com setinhas)</li>
+<li><strong>Eficiência da jornada:</strong> worker dedica 85% do tempo
+bruto a tarefa (os 15% restantes cobrem micro-pausas, organização das
+pastas no Drive, atualização da planilha em lote, leitura de mensagens
+no grupo de WhatsApp)</li>
+<li><strong>Curva de aprendizagem:</strong> zerada após onboarding —
+workers não atingem essa produtividade no primeiro dia</li>
+<li><strong>Jornada diária produtiva:</strong> 6 horas (sobre 8 horas de
+janela), considerando intervalos e overhead administrativo</li>
+</ul>
+<h3 id="tarefa-1-decomposição-por-etapa">1.2. Tarefa 1 — decomposição
+por etapa</h3>
+<p>Tempo em segundos, base de um produto <strong>aprovado
+direto</strong> (sem editar categoria, sem ir para revisão). Etapas
+referenciam a seção 7.4 do manual.</p>
+<table>
+<colgroup>
+<col style="width: 27%" />
+<col style="width: 36%" />
+<col style="width: 36%" />
+</colgroup>
+<thead>
+<tr>
+<th>Etapa</th>
+<th style="text-align: right;">Mínimo</th>
+<th style="text-align: right;">Máximo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a) Abrir Link da Loja</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">20</td>
+</tr>
+<tr>
+<td>b) Comparar nome Hub × site</td>
+<td style="text-align: right;">15</td>
+<td style="text-align: right;">30</td>
+</tr>
+<tr>
+<td>c) Conferir imagem (padrão BeClean)</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">20</td>
+</tr>
+<tr>
+<td>d) Validar EAN (Cosmos / Pesquisa de produto / GS1)</td>
+<td style="text-align: right;">30</td>
+<td style="text-align: right;">60</td>
+</tr>
+<tr>
+<td>e) Conferir categoria/subcategoria</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">30</td>
+</tr>
+<tr>
+<td><strong>f) Avaliação de ingredientes via IA</strong> (3 copy/paste +
+prompt + leitura da conclusão)</td>
+<td style="text-align: right;"><strong>90</strong></td>
+<td style="text-align: right;"><strong>180</strong></td>
+</tr>
+<tr>
+<td>g) Aprovar produto + aguardar toast</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">20</td>
+</tr>
+<tr>
+<td>Screenshots ao longo do caminho</td>
+<td style="text-align: right;">60</td>
+<td style="text-align: right;">120</td>
+</tr>
+<tr>
+<td>Linha na planilha de controle</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">40</td>
+</tr>
+<tr>
+<td><strong>Total — produto aprovado direto</strong></td>
+<td style="text-align: right;"><strong>255 s (~4,2 min)</strong></td>
+<td style="text-align: right;"><strong>520 s (~8,7 min)</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Acréscimos por cenário:</strong></p>
+<ul>
+<li><strong>Editar categoria/subcategoria</strong> (passo 7.4.e com
+correção): +30–60 s</li>
+<li><strong>Enviar para revisão</strong> (passo 7.5: Observação + Motivo
++ Confirmar): +50–100 s</li>
+</ul>
+<p>O passo (f) — comparação das três listas de ingredientes via IA — é o
+<strong>gargalo dominante</strong>. Qualquer ganho de produtividade na
+Tarefa 1 passa por reduzir esse tempo (atalhos de copy, prompt salvo no
+chat, IA local com latência menor, etc.).</p>
+<h3 id="tarefa-2-decomposição-por-etapa">1.3. Tarefa 2 — decomposição
+por etapa</h3>
+<p>Tempo em segundos, base de um produto <strong>típico</strong> (rótulo
+razoável, OCR razoável, ~5 ingredientes a corrigir). Etapas referenciam
+as seções 8.3 a 8.6 do manual.</p>
+<table>
+<colgroup>
+<col style="width: 27%" />
+<col style="width: 36%" />
+<col style="width: 36%" />
+</colgroup>
+<thead>
+<tr>
+<th>Etapa</th>
+<th style="text-align: right;">Mínimo</th>
+<th style="text-align: right;">Máximo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Abrir produto + dashboard + escolher melhor submissão</td>
+<td style="text-align: right;">30</td>
+<td style="text-align: right;">60</td>
+</tr>
+<tr>
+<td>Identificar ingredientes &lt;95% de confiança</td>
+<td style="text-align: right;">15</td>
+<td style="text-align: right;">30</td>
+</tr>
+<tr>
+<td>Abrir/inspecionar foto do rótulo</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">20</td>
+</tr>
+<tr>
+<td><strong>Corrigir ingredientes pouco confiáveis</strong> (~5 × ~25
+s)</td>
+<td style="text-align: right;"><strong>90</strong></td>
+<td style="text-align: right;"><strong>240</strong></td>
+</tr>
+<tr>
+<td><strong>Ajustar ordem dos ingredientes</strong> (setinhas —
+pendência conhecida)</td>
+<td style="text-align: right;"><strong>60</strong></td>
+<td style="text-align: right;"><strong>240</strong></td>
+</tr>
+<tr>
+<td>Salvar Curadoria + Criar e Resolver no Hub</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">40</td>
+</tr>
+<tr>
+<td>Normalização (marca, categoria, subcategoria, nome)</td>
+<td style="text-align: right;">60</td>
+<td style="text-align: right;">120</td>
+</tr>
+<tr>
+<td>Screenshots ao longo do caminho</td>
+<td style="text-align: right;">60</td>
+<td style="text-align: right;">120</td>
+</tr>
+<tr>
+<td>Linha na planilha de controle</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">40</td>
+</tr>
+<tr>
+<td><strong>Total — produto típico</strong></td>
+<td style="text-align: right;"><strong>365 s (~6,1 min)</strong></td>
+<td style="text-align: right;"><strong>910 s (~15,2 min)</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Variações por dificuldade:</strong></p>
+<ul>
+<li><strong>Rótulo cilíndrico ou OCR muito ruim:</strong> o tempo de
+correção de ingredientes pode dobrar — produto difícil chega a 15–20
+min</li>
+<li><strong>Ordem completamente embaralhada:</strong> o ajuste por
+setinhas é lento; pode somar +2–4 min sozinho</li>
+<li><strong>Caso de dilema</strong> (rótulo ilegível, dúvida não
+resolvível): mais +1–2 min para abrir "Criar e Resolver no Hub" como
+revisão</li>
+</ul>
+<h3 id="throughput-por-hora">1.4. Throughput por hora</h3>
+<p>Aplicando as faixas acima sobre uma jornada com <strong>85% de tempo
+produtivo</strong> (15% para micro-pausas, organização e overhead):</p>
+<table>
+<colgroup>
+<col style="width: 42%" />
+<col style="width: 57%" />
+</colgroup>
+<thead>
+<tr>
+<th>Cenário</th>
+<th style="text-align: right;">Produtos por hora</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Tarefa 1 — base teórica</strong> (aprovado direto)</td>
+<td style="text-align: right;">6,9 – 14,1</td>
+</tr>
+<tr>
+<td><strong>Tarefa 1 — efetivo a 85%</strong> (aprovado direto)</td>
+<td style="text-align: right;">5,9 – 12,0</td>
+</tr>
+<tr>
+<td><strong>Tarefa 1 — mix realista</strong> (70% ok / 20% editar cat /
+10% revisão), efetivo</td>
+<td style="text-align: right;"><strong>5,6 – 11,5</strong></td>
+</tr>
+<tr>
+<td><strong>Tarefa 2 — base teórica</strong> (produto típico)</td>
+<td style="text-align: right;">4,0 – 9,9</td>
+</tr>
+<tr>
+<td><strong>Tarefa 2 — efetivo a 85%</strong> (produto típico)</td>
+<td style="text-align: right;"><strong>3,4 – 8,4</strong></td>
+</tr>
+<tr>
+<td>Tarefa 2 — rótulo fácil (OCR limpo)</td>
+<td style="text-align: right;">4,8 – 5,9</td>
+</tr>
+<tr>
+<td>Tarefa 2 — rótulo difícil (OCR ruim, ordem embaralhada)</td>
+<td style="text-align: right;">2,9 – 4,4</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Tarefa 1 com aprovação em lote (seção 7.6):</strong></p>
+<p>Para lotes acima de 50 produtos a regra é amostrar 20% e aprovar o
+restante em lote. Isso muda o regime de produtividade radicalmente — o
+gargalo deixa de ser a conferência produto-a-produto e passa a ser o
+ciclo da amostra.</p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th style="text-align: right;">Tamanho do lote</th>
+<th style="text-align: right;">Amostra (20%)</th>
+<th style="text-align: right;">Tempo total estimado</th>
+<th style="text-align: right;">Throughput médio</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">50</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">~72 min</td>
+<td style="text-align: right;">~41,5 produtos/h</td>
+</tr>
+<tr>
+<td style="text-align: right;">100</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">~140 min</td>
+<td style="text-align: right;">~43,0 produtos/h</td>
+</tr>
+<tr>
+<td style="text-align: right;">200</td>
+<td style="text-align: right;">40</td>
+<td style="text-align: right;">~274 min</td>
+<td style="text-align: right;">~43,7 produtos/h</td>
+</tr>
+</tbody>
+</table>
+<p>O throughput converge perto de <strong>~43 produtos/h</strong> porque
+o custo fixo da aprovação em lote (~5 min para selecionar todos, aprovar
+e aguardar o toast) se dilui em lotes maiores. Isso explica por que a
+regra de amostragem é tão importante: ela é o que faz a Tarefa 1
+escalar.</p>
+<h3 id="estimativa-diária">1.5. Estimativa diária</h3>
+<p>Considerando <strong>6 horas produtivas por dia</strong> (jornada de
+8h descontando pausas, deslocamento entre marcas/datas, troca de aba,
+leitura de mensagens):</p>
+<table>
+<colgroup>
+<col style="width: 42%" />
+<col style="width: 57%" />
+</colgroup>
+<thead>
+<tr>
+<th>Cenário</th>
+<th style="text-align: right;">Produtos por dia</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tarefa 1 — mix realista, <strong>sem aprovação em lote</strong>
+(lotes ≤ 50)</td>
+<td style="text-align: right;"><strong>34 – 69</strong></td>
+</tr>
+<tr>
+<td>Tarefa 1 — com aprovação em lote (lotes grandes dominam)</td>
+<td style="text-align: right;">~250</td>
+</tr>
+<tr>
+<td>Tarefa 2 — produto típico</td>
+<td style="text-align: right;"><strong>20 – 50</strong></td>
+</tr>
+</tbody>
+</table>
+<div class="note-callout"><span class="nc-tag">// nota</span><div class="nc-body">Os números da Tarefa 1 com aprovação em lote
+dependem <strong>fortemente</strong> do tamanho médio dos lotes
+recebidos. Se o worker passa o dia em marcas com lotes de 10–40 produtos
+(abaixo da nota de corte), a produtividade fica na faixa inferior
+(34–69/dia). Se cai em marcas grandes (lotes 100+), pode chegar a
+250+/dia trivialmente. A média real só sai depois de ver a distribuição
+de tamanhos de lote por marca.</div></div>
+<h3 id="como-recalibrar-com-dados-reais">1.6. Como recalibrar com dados
+reais</h3>
+<p>Depois de duas semanas de execução, a planilha de controle de cada
+worker terá dados suficientes para substituir as estimativas a priori
+desta seção. O caminho de calibração:</p>
+<ol type="1">
+<li><strong>Extrair a coluna "Tempo gasto (min)"</strong> de todas as
+planilhas dos workers, segmentando por Tarefa</li>
+<li><strong>Calcular percentis</strong> (p25, p50, p75) por tarefa — a
+média é menos útil aqui porque produtos difíceis criam cauda longa</li>
+<li><strong>Cruzar com a coluna "Resultado"</strong> ("Aprovado" vs.
+"Enviado para revisão") para validar a premissa de mix (70/20/10 da
+Tarefa 1)</li>
+<li><strong>Cruzar com a coluna "Marca / Faixa de datas"</strong> para
+identificar marcas/faixas que pesam acima da média (sinal de problema
+estrutural — anotar em "Observações")</li>
+<li><strong>Substituir as faixas desta seção</strong> pelos percentis
+observados, e marcar a versão do documento (v1.6+) com a data da
+recalibração</li>
+</ol>
+<p>A versão <strong>v1.5</strong> assume tudo isso a priori. As próximas
+versões devem trazer as faixas observadas e, idealmente, gráficos de
+distribuição por marca/faixa de coleta.</p>
+
+    </article>
+    <aside class="toc-side" aria-label="Sumário lateral">
+      <div class="toc-side-inner">
+        <div class="eyebrow"><span class="bar"></span>nesta página</div>
+        <ol class="toc-list">
+        <li class="toc-h2"><a href="#sec-racional"><span class="t">1. Racional das estimativas de tempo</span></a></li>
+        <li class="toc-h3"><a href="#metodologia"><span class="t">1.1. Metodologia</span></a></li>
+        <li class="toc-h3"><a href="#tarefa-1-decomposição-por-etapa"><span class="t">1.2. Tarefa 1 — decomposição
+por etapa</span></a></li>
+        <li class="toc-h3"><a href="#tarefa-2-decomposição-por-etapa"><span class="t">1.3. Tarefa 2 — decomposição
+por etapa</span></a></li>
+        <li class="toc-h3"><a href="#throughput-por-hora"><span class="t">1.4. Throughput por hora</span></a></li>
+        <li class="toc-h3"><a href="#estimativa-diária"><span class="t">1.5. Estimativa diária</span></a></li>
+        <li class="toc-h3"><a href="#como-recalibrar-com-dados-reais"><span class="t">1.6. Como recalibrar com dados
+reais</span></a></li>
+        </ol>
+        <a href="#" class="toc-top" aria-label="Voltar ao topo">↑ topo</a>
+      </div>
+    </aside>
+  </div>
+</main>
+<footer class="site-footer">
+  <div class="shell-wide row">
+    <a href="https://novosite.baselabs.com.br/" aria-label="BASE/labs">
+      <img src="https://novosite.baselabs.com.br/logo-azul.webp" alt="BASE/labs">
+    </a>
+    <div class="legal">
+      <span>© 2026 BASE/labs · Braço de IA da BASE2</span>
+      <a href="mailto:hbarros@baselabs.com.br">Dúvidas: hbarros@baselabs.com.br</a>
+    </div>
+  </div>
+</footer>
+<script>
+// Category filter
+(() => {
+  const input = document.querySelector('.cat-filter');
+  if (!input) return;
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    document.querySelectorAll('.cat-heading').forEach(h2 => {
+      const table = h2.nextElementSibling;
+      if (!table) return;
+      const catMatch = !q || h2.textContent.toLowerCase().includes(q);
+      let visibleRows = 0;
+      table.querySelectorAll('tbody tr').forEach(tr => {
+        const match = catMatch || tr.textContent.toLowerCase().includes(q);
+        tr.classList.toggle('cat-hidden', !match);
+        if (match) visibleRows++;
+      });
+      const hide = q && !catMatch && visibleRows === 0;
+      h2.classList.toggle('cat-hidden', hide);
+      table.classList.toggle('cat-hidden', hide);
+    });
+  });
+})();
+
+(() => {
+  const headings = document.querySelectorAll('.content-body h2[id], .content-body h3[id], .content-body h4[id]');
+  const links = document.querySelectorAll('.toc-side a[href^="#"]');
+  if (!headings.length || !links.length) return;
+  const linkByHref = {};
+  links.forEach(a => { linkByHref[a.getAttribute('href')] = a; });
+  let activeId = null;
+  const setActive = (id) => {
+    if (id === activeId) return;
+    activeId = id;
+    links.forEach(a => a.classList.remove('active'));
+    const link = linkByHref['#' + id];
+    if (link) link.classList.add('active');
+  };
+  const visible = new Map();
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) visible.set(e.target.id, e.target);
+      else visible.delete(e.target.id);
+    });
+    const ids = [...visible.values()].sort((a,b) => a.offsetTop - b.offsetTop).map(el => el.id);
+    if (ids.length) setActive(ids[0]);
+  }, { rootMargin: '-130px 0px -70% 0px' });
+  headings.forEach(h => io.observe(h));
+})();
+</script>
+</body>
+</html>

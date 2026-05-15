@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Categorias · Instruções para Workers — BeClean · BASE/labs</title>
+<meta name="description" content="Manual operacional dos workers BASE/labs alocados ao projeto BeClean — validação no Hub.">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500;1,600&display=swap">
+<link rel="icon" href="https://novosite.baselabs.com.br/favicon-32.webp" sizes="32x32" type="image/webp">
+<style>
+:root {
+  --bg: #f6f7f9;
+  --bg-1: #ffffff;
+  --bg-2: #eef0f4;
+  --fg: #14182a;
+  --fg-2: #404862;
+  --fg-3: #6a7488;
+  --brand: #3654ae;
+  --brand-2: #2a4490;
+  --brand-coral: #ff6e5a;
+  --line: #acb8ca;
+  --line-soft: #d1d7e0;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --r-3: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 15px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+.shell { width: min(960px, 100% - 48px); margin-inline: auto; }
+.shell-wide { width: min(1200px, 100% - 48px); margin-inline: auto; }
+
+/* Header */
+.site-header {
+  position: sticky; top: 0; z-index: 80;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: saturate(140%) blur(8px);
+  -webkit-backdrop-filter: saturate(140%) blur(8px);
+  border-bottom: 1px solid var(--line-soft);
+}
+.site-header .row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; height: 64px;
+}
+.site-header img { height: 28px; width: auto; }
+.site-header .crumbs { font-size: 12px; color: var(--fg-3); letter-spacing: 0.04em; }
+.site-header .crumbs a { color: var(--fg-2); text-decoration: none; }
+.site-header .crumbs a:hover { color: var(--brand); }
+
+/* Page nav (top tabs) */
+.page-nav {
+  position: sticky; top: 64px; z-index: 70;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--line-soft);
+}
+.page-nav ul {
+  display: flex; gap: 0;
+  margin: 0; padding: 0;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.page-nav ul::-webkit-scrollbar { display: none; }
+.page-nav li { flex-shrink: 0; }
+.page-nav li::before { content: none; }
+.page-nav a {
+  display: block;
+  padding: 14px 24px;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--fg-3);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+.page-nav a:hover { color: var(--fg-2); }
+.page-nav a.active { color: var(--brand); border-bottom-color: var(--brand); }
+
+/* Cover */
+.cover {
+  padding: clamp(48px, 8vw, 88px) 0 clamp(28px, 5vw, 56px);
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--bg-1);
+}
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--fg-3); letter-spacing: 0.04em;
+  text-transform: lowercase; margin-bottom: 20px;
+}
+.eyebrow .bar { width: 24px; height: 2px; background: var(--brand); display: inline-block; }
+.cover h1 {
+  font-family: var(--mono);
+  font-size: clamp(32px, 5.4vw, 60px);
+  font-weight: 700;
+  line-height: 1.0;
+  letter-spacing: -0.03em;
+  margin: 0 0 24px;
+  color: var(--fg);
+  max-width: 22ch;
+}
+.cover h1 em { font-style: italic; font-weight: 400; color: var(--brand); }
+.cover .meta {
+  margin-top: 36px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px 32px;
+  font-size: 13px;
+}
+.cover .meta .k { color: var(--fg-3); text-transform: lowercase; letter-spacing: 0.04em; }
+.cover .meta .v { color: var(--fg); margin-top: 4px; }
+.cover .meta a { color: var(--brand); text-decoration: none; }
+.cover .meta a:hover { text-decoration: underline; }
+
+/* Content + sidebar layout */
+.content { padding: clamp(40px, 6vw, 80px) 0 clamp(56px, 8vw, 120px); }
+.content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  gap: 64px;
+  align-items: start;
+}
+.content-body { min-width: 0; }
+
+/* Content typography */
+.content-body h1 { display: none; }
+.content-body h2 {
+  font-family: var(--mono);
+  font-size: clamp(22px, 2.6vw, 30px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 64px 0 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line-soft);
+  color: var(--fg);
+  scroll-margin-top: 130px;
+}
+.content-body > h2:first-of-type { margin-top: 0; border-top: 0; padding-top: 0; }
+.content-body h3 {
+  font-family: var(--mono);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 36px 0 12px;
+  color: var(--fg);
+  scroll-margin-top: 130px;
+}
+.content-body h3::before { content: "// "; color: var(--brand); font-weight: 400; }
+.content-body h4 {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+  color: var(--fg-2);
+  margin: 24px 0 8px;
+  scroll-margin-top: 130px;
+}
+.content-body p, .content-body li { font-size: 15px; color: var(--fg-2); line-height: 1.7; }
+.content-body p { margin: 12px 0; }
+.content-body ul, .content-body ol { padding-left: 24px; margin: 12px 0; }
+.content-body ul li { list-style: none; position: relative; }
+.content-body ul li::before { content: "—"; position: absolute; left: -22px; color: var(--brand); }
+.content-body ol { padding-left: 28px; }
+.content-body ol li { padding-left: 4px; }
+.content-body ol li::marker { color: var(--brand); font-weight: 500; }
+.content-body strong { color: var(--fg); font-weight: 600; }
+.content-body em { color: var(--fg); font-style: italic; }
+.content-body a {
+  color: var(--brand); text-decoration: underline;
+  text-decoration-thickness: 1px; text-underline-offset: 2px;
+}
+.content-body a:hover { color: var(--brand-2); }
+.content-body code {
+  font-family: var(--mono);
+  background: var(--bg-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.92em;
+  color: var(--fg);
+}
+.content-body pre {
+  background: #0e1224;
+  border: 1px solid var(--brand-2);
+  border-radius: var(--r-3);
+  padding: 18px 22px;
+  overflow-x: auto;
+  margin: 20px 0;
+  position: relative;
+}
+.content-body pre::before {
+  content: "// prompt";
+  position: absolute; top: -10px; left: 16px;
+  background: #0e1224;
+  padding: 0 8px;
+  font-size: 11px;
+  color: #9edc37;
+  letter-spacing: 0.06em;
+}
+.content-body pre code {
+  background: transparent; border: 0; padding: 0;
+  color: #d1d7e0; font-size: 13px; line-height: 1.65;
+  white-space: pre-wrap;
+}
+.content-body hr { display: none; }
+.content-body blockquote {
+  border-left: 2px solid var(--brand);
+  background: var(--bg-1);
+  padding: 14px 20px;
+  margin: 16px 0;
+  color: var(--fg-2);
+  border-radius: 0 var(--r-3) var(--r-3) 0;
+}
+.content-body blockquote p { margin: 0; }
+
+/* Screenshot slots (text placeholder) */
+.screenshot-slot {
+  margin: 12px 0;
+  padding: 14px 18px;
+  background: var(--bg-1);
+  border: 1px dashed var(--line);
+  border-radius: var(--r-3);
+  display: flex; gap: 14px; align-items: baseline;
+  font-size: 13px;
+}
+.screenshot-slot .ss-tag { color: var(--brand); font-weight: 500; letter-spacing: 0.04em; flex-shrink: 0; }
+.screenshot-slot .ss-text { color: var(--fg-3); font-style: italic; }
+
+/* Screenshot slots (with image) */
+figure.screenshot-slot.has-img {
+  display: block;
+  margin: 20px 0;
+  padding: 0;
+  background: var(--bg-1);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-3);
+  overflow: hidden;
+}
+figure.screenshot-slot.has-img .ss-cap {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  padding: 12px 16px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 12.5px;
+}
+figure.screenshot-slot.has-img .ss-cap .ss-tag {
+  color: var(--brand); font-weight: 500;
+  letter-spacing: 0.04em; flex-shrink: 0;
+}
+figure.screenshot-slot.has-img .ss-cap .ss-text {
+  color: var(--fg-2); font-style: normal;
+}
+figure.screenshot-slot.has-img img {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #fff;
+}
+
+/* Note callouts */
+.note-callout {
+  display: flex; gap: 16px;
+  padding: 14px 18px;
+  margin: 16px 0;
+  background: #fff8f3;
+  border-left: 3px solid var(--brand-coral);
+  border-radius: 0 var(--r-3) var(--r-3) 0;
+}
+.note-callout .nc-tag {
+  color: var(--brand-coral); font-size: 12px;
+  letter-spacing: 0.04em; flex-shrink: 0; padding-top: 2px;
+}
+.note-callout .nc-body { color: var(--fg-2); font-size: 14px; line-height: 1.6; }
+
+/* Aviso callouts (navigation hint — yellow, bold) */
+.aviso-callout {
+  display: flex; gap: 16px;
+  padding: 14px 18px;
+  margin: 24px 0 8px;
+  background: #fffbe6;
+  border-left: 3px solid #e6a800;
+  border-radius: 0 var(--r-3) var(--r-3) 0;
+}
+.aviso-callout .av-tag {
+  color: #b37f00; font-size: 12px;
+  letter-spacing: 0.04em; flex-shrink: 0; padding-top: 2px; font-weight: 500;
+}
+.aviso-callout .av-body { color: var(--fg); font-size: 14px; line-height: 1.6; font-weight: 600; }
+
+/* Warning callouts */
+.warning-callout {
+  display: flex; gap: 16px;
+  padding: 14px 18px;
+  margin: 16px 0;
+  background: #fff2f2;
+  border-left: 3px solid #d93025;
+  border-radius: 0 var(--r-3) var(--r-3) 0;
+}
+.warning-callout .wn-tag {
+  color: #d93025; font-size: 12px;
+  letter-spacing: 0.04em; flex-shrink: 0; padding-top: 2px; font-weight: 500;
+}
+.warning-callout .wn-body { color: var(--fg); font-size: 14px; line-height: 1.6; font-weight: 500; }
+
+/* Evidence callouts */
+.evidence-callout {
+  display: flex; gap: 16px;
+  padding: 14px 18px;
+  margin: 24px 0 8px;
+  background: #fffbe6;
+  border-left: 3px solid #e6a800;
+  border-radius: 0 var(--r-3) var(--r-3) 0;
+}
+.evidence-callout .ev-tag {
+  color: #b37f00; font-size: 12px;
+  letter-spacing: 0.04em; flex-shrink: 0; padding-top: 2px; font-weight: 500;
+}
+.evidence-callout .ev-body { color: var(--fg-2); font-size: 14px; line-height: 1.6; }
+
+/* Side TOC */
+.toc-side {
+  position: sticky;
+  top: 140px;
+  align-self: start;
+  font-size: 13px;
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.toc-side .toc-side-inner > .eyebrow { margin-bottom: 12px; }
+.toc-side ol, .toc-side ul { list-style: none; padding: 0; margin: 0; }
+.toc-side li { margin: 0; padding: 0; }
+.toc-side li::before { content: none; }
+.toc-side a {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 0 6px 12px;
+  margin-left: -12px;
+  border-left: 2px solid transparent;
+  color: var(--fg-3);
+  text-decoration: none;
+  line-height: 1.45;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.toc-side a:hover { color: var(--fg-2); }
+.toc-side a.active { color: var(--brand); border-left-color: var(--brand); }
+.toc-side .toc-h2 > a { font-weight: 500; color: var(--fg-2); }
+.toc-side .toc-h2 > a.active { color: var(--brand); }
+.toc-side .toc-h3 > a {
+  padding-left: 28px;
+  margin-left: -12px;
+  font-size: 12.5px;
+}
+.toc-side .toc-h4 > a {
+  padding-left: 44px;
+  margin-left: -12px;
+  font-size: 12px;
+  color: var(--fg-3);
+}
+.toc-side .toc-top {
+  display: inline-block;
+  margin-top: 20px;
+  font-size: 12px;
+  color: var(--fg-3);
+  text-decoration: none;
+  letter-spacing: 0.04em;
+}
+.toc-side .toc-top:hover { color: var(--brand); }
+
+/* Footer */
+.site-footer {
+  border-top: 1px solid var(--line-soft);
+  background: var(--bg-1);
+  padding: 48px 0 56px;
+  font-size: 13px;
+  color: var(--fg-3);
+}
+.site-footer .row {
+  display: flex; gap: 24px; flex-wrap: wrap;
+  justify-content: space-between; align-items: center;
+}
+.site-footer img { height: 22px; opacity: 0.85; }
+.site-footer .legal { display: flex; gap: 16px; flex-wrap: wrap; }
+.site-footer a { color: var(--fg-2); text-decoration: none; }
+.site-footer a:hover { color: var(--brand); }
+
+/* Page footer nav (prev/next) */
+.page-footer-nav {
+  margin-top: 80px;
+  padding-top: 32px;
+  border-top: 1px solid var(--line-soft);
+  display: flex; gap: 16px;
+  justify-content: space-between; flex-wrap: wrap;
+}
+.page-footer-nav a {
+  text-decoration: none;
+  color: var(--fg-2);
+  font-size: 13px;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 12px 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-3);
+  background: var(--bg-1);
+  min-width: 200px;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.page-footer-nav a:hover { border-color: var(--brand); color: var(--brand); }
+.page-footer-nav .pfn-k { font-size: 11px; color: var(--fg-3); letter-spacing: 0.04em; }
+.page-footer-nav .pfn-prev { text-align: left; }
+.page-footer-nav .pfn-next { text-align: right; margin-left: auto; }
+.page-footer-nav .pfn-next .pfn-k { text-align: right; }
+
+/* Categories table */
+.cat-heading {
+  font-size: clamp(18px, 2vw, 24px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 56px 0 14px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line-soft);
+  color: var(--fg);
+  scroll-margin-top: 130px;
+}
+.content-body > .cat-heading:first-of-type { margin-top: 0; border-top: 0; padding-top: 0; }
+.cat-filter-wrap {
+  margin-bottom: 32px;
+}
+.cat-filter {
+  width: 100%;
+  max-width: 420px;
+  padding: 10px 14px;
+  font-family: var(--mono);
+  font-size: 13px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  color: var(--fg);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.cat-filter:focus { border-color: var(--brand); }
+.cat-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.cat-table thead th {
+  text-align: left;
+  padding: 8px 14px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-soft);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  font-weight: 500;
+}
+.cat-table tbody tr { transition: background 0.1s; }
+.cat-table tbody tr:hover { background: var(--bg-2); }
+.cat-table td {
+  padding: 9px 14px;
+  border: 1px solid var(--line-soft);
+  vertical-align: top;
+  line-height: 1.55;
+}
+.cat-sub {
+  width: 220px;
+  font-weight: 500;
+  color: var(--fg);
+  white-space: nowrap;
+}
+.cat-examples { color: var(--fg-3); }
+.cat-hidden { display: none; }
+
+/* Generic content tables (e.g. Problemas Comuns) */
+.content-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin: 24px 0 32px;
+  border-radius: var(--r-3);
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+}
+.content-body table thead th {
+  text-align: left;
+  padding: 12px 18px;
+  background: var(--fg);
+  color: var(--bg-1);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  border-bottom: 2px solid var(--brand);
+}
+.content-body table tbody tr:nth-child(odd) {
+  background: var(--bg-1);
+}
+.content-body table tbody tr:nth-child(even) {
+  background: var(--bg-2);
+}
+.content-body table tbody tr:hover {
+  background: #dde1ea;
+}
+.content-body table td {
+  padding: 14px 18px;
+  vertical-align: top;
+  line-height: 1.65;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--fg);
+}
+.content-body table td:first-child {
+  font-weight: 600;
+  color: var(--brand-2);
+  white-space: nowrap;
+  width: 28%;
+}
+.content-body table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+@media (max-width: 1024px) {
+  .content-grid { grid-template-columns: 1fr; gap: 0; }
+  .toc-side { display: none; }
+  .page-nav { top: 64px; }
+  .content-body h2, .content-body h3 { scroll-margin-top: 130px; }
+}
+@media (max-width: 640px) {
+  body { font-size: 14px; }
+  .shell, .shell-wide { width: min(640px, 100% - 32px); }
+  .cover h1 { font-size: 30px; }
+  .content-body h2 { font-size: 21px; margin-top: 48px; }
+  .content-body h3 { font-size: 16px; }
+  .page-nav a { padding: 12px 16px; }
+}
+@media print {
+  .site-header, .page-nav, .site-footer, .toc-side, .page-footer-nav { display: none; }
+  .content-grid { grid-template-columns: 1fr; }
+  body { background: white; }
+  .content-body pre { background: #f3f4f8; color: #14182a; border-color: var(--line-soft); }
+  .content-body pre::before { background: #f3f4f8; color: var(--brand-2); }
+  .content-body pre code { color: #14182a; }
+}
+</style>
+</head>
+<body>
+<header class="site-header">
+  <div class="shell-wide row">
+    <a href="https://novosite.baselabs.com.br/" aria-label="BASE/labs">
+      <img src="https://novosite.baselabs.com.br/logo-azul.webp" alt="BASE/labs">
+    </a>
+    <div class="crumbs">
+      <a href="https://novosite.baselabs.com.br/">base/labs</a>
+      &nbsp;/&nbsp; beclean
+      &nbsp;/&nbsp; instruções workers
+    </div>
+  </div>
+</header>
+<nav class="page-nav" aria-label="Páginas do manual">
+  <div class="shell-wide">
+    <ul>
+      <li><a href="/beclean/instrucoes_workers/" class="">Início</a></li>
+      <li><a href="/beclean/instrucoes_workers/regras/" class="">Regras</a></li>
+      <li><a href="/beclean/instrucoes_workers/tarefa-1/" class="">Tarefa 1</a></li>
+      <li><a href="/beclean/instrucoes_workers/categorias/" class="active">Categorias</a></li>
+      <li><a href="/beclean/instrucoes_workers/problemas/" class="">FAQ</a></li>
+    </ul>
+  </div>
+</nav>
+<section class="cover">
+  <div class="shell-wide">
+    <div class="eyebrow"><span class="bar"></span>referência · categorias e subcategorias</div>
+    <h1><em>Categorias</em><br>e Subcategorias.</h1>
+    
+  </div>
+</section>
+<main class="content">
+  <div class="shell-wide content-grid">
+    <article class="content-body">
+<div class="cat-filter-wrap"><input class="cat-filter" type="search" placeholder="Filtrar por categoria ou subcategoria…" aria-label="Filtrar categorias"></div>
+<h2 id="cat-pele-skincare" class="cat-heading">Pele (Skincare)</h2>
+<table class="cat-table">
+<thead><tr><th>Subcategoria</th><th>Exemplos</th></tr></thead>
+<tbody>
+<tr><td class="cat-sub">LIMPEZA FACIAL</td><td><span class="cat-examples">Gel de limpeza facial; Sabonete facial; Espuma de limpeza facial; Água micelar; Leite de Limpeza  facial; Cleansing oil; Cleansing balm; Syndet; Sabonete Antiacne; Gel antiacne; Sabonente antioleosidade/controle de oleosidade; Gel antioleosidade/controle de oleosidade</span></td></tr>
+<tr><td class="cat-sub">DEMAQUILANTE</td><td><span class="cat-examples">Demaquilante bifásico; Lenços demaquilantes; Água micelar demaquilante; Óleo de limpeza</span></td></tr>
+<tr><td class="cat-sub">TRATAMENTO FACIAL</td><td><span class="cat-examples">Booster; Uniformizador de tom; Creme reparador de barreira; Creme clareador; Brumas faciais; Água termal; Creme calmante; Creme antiacne; Secativo; Creme antioleosidade/controle de oleosidade; Sérum hidratante; Sérum antioxidante; Sérum antienvelhecimento; Sérum clareador; Sérum calmante; Sérum preenchedor; Sérum reparador de barreira; Sérum antipoluição; Sérum matificante; Sérum minimizador de poros; Sérum antiacne; Sérum rejuvencedor; Sérum antiacne; Sérum antioleosidade/controle de oleosidade; Tônico facial; Tônico adstringente; Tônico calmante</span></td></tr>
+<tr><td class="cat-sub">Hidratantes faciais</td><td><span class="cat-examples">Hidratantes faciais; Hidratante em gel; Hidrantes antioleosidade/ controle de oleosidade; Hidratante antiacne</span></td></tr>
+<tr><td class="cat-sub">LÁBIOS</td><td><span class="cat-examples">Balm labial; Hidratante labial; Esfoliante labial; Máscara labial</span></td></tr>
+<tr><td class="cat-sub">ÁREA DOS OLHOS</td><td><span class="cat-examples">Creme para a área dos olhos; Sérum para área dos olhos; Gel para os olhos; Creme para olheiras; Hidratante para os olhos; Antissinais; Firmador; Preenchimento de sulcos finos; Iluminador; Clareador; Antiolheiras; Redução de bolsas; Para linhas finas; Demaquilante para os olhos</span></td></tr>
+<tr><td class="cat-sub">MÁSCARAS FACIAIS</td><td><span class="cat-examples">Máscara para os olhos; Máscara facial; Máscara antiacne; Sheet mask; Máscara Noturna; Máscara de carvão aditivado; Máscara facial de argila; Máscara facial de argila verde; Máscara facila de argila branca; Máscara facial de argila preta; Máscara facil de argila rosa; Máscara facil de argila roxa; Máscara facial de argila vermelha; Máscara facial de argila amarela; Máscara antioleosidade/controle de oleosidade</span></td></tr>
+<tr><td class="cat-sub">PRO-AGE</td><td><span class="cat-examples">Sérum calmante; Creme anti-idade; Creme rejuvenecedor; Renovação celular; Reparador de barreira; Efeito lifting; Filler; Preenchimento; Firmeza; Cremes facial com colágeno; Rugas e linhas</span></td></tr>
+<tr><td class="cat-sub">ESFOLIANTE</td><td><span class="cat-examples">Scrub facial; Esfoliante labial; Esfoliante facial; Ácido glicólico; Ácido lático; Ácido mandélico; Ácido salicílico; Esfoliante antioleosidade/controle de oleosidade; Esfoliante antiacne</span></td></tr>
+</tbody></table>
+<h2 id="cat-maquiagem" class="cat-heading">Maquiagem</h2>
+<table class="cat-table">
+<thead><tr><th>Subcategoria</th><th>Exemplos</th></tr></thead>
+<tbody>
+<tr><td class="cat-sub">FACE</td><td><span class="cat-examples">Base; Corretivo; BB Cream; CC Cream; Primer (face); Pó compacto; Pó solto; Pó translúcido; Blush; Iluminador; Contorno; Bronzer; Fixador de maquiagem; Spray preparador; Bruma hidratante pré-make</span></td></tr>
+<tr><td class="cat-sub">OLHOS</td><td><span class="cat-examples">Sombras; Glitter para os olhos; Máscara para cílios (rímel); Máscara Alongadora; Máscara Volumizadora; Máscara À prova d’água; Lápis para os olhos; Primer para os olhos; Corretivo; Deliniador</span></td></tr>
+<tr><td class="cat-sub">BOCA</td><td><span class="cat-examples">Batom; Gloss; Lip Tint; Lip Balm; Hidratante labial; Lip Oil; Lápis de boca; Primer labial</span></td></tr>
+<tr><td class="cat-sub">SOBRANCELHA</td><td><span class="cat-examples">Lápis para sobrancelha; Gel modelador para sobrancelhas incolor; Gel modelador para sobrancelhas com cor; Caneta para sobrancelhas</span></td></tr>
+<tr><td class="cat-sub">MULTIFUNCIONAL</td><td><span class="cat-examples">Produtos 3 em 1; Produtos 2 em 1; Produtos multifuncional; Bastão multifuncional; Glitter</span></td></tr>
+<tr><td class="cat-sub">MAQUIAGEM CORPORAL</td><td></td></tr>
+</tbody></table>
+<h2 id="cat-cabelos" class="cat-heading">Cabelos </h2>
+<table class="cat-table">
+<thead><tr><th>Subcategoria</th><th>Exemplos</th></tr></thead>
+<tbody>
+<tr><td class="cat-sub">SHAMPOO</td><td><span class="cat-examples">Shampoo; Shampoo a seco; Shampoo pós-coloração; Shampoo anticaspa; Shampoo antirresíduo; Shampoo antiqueda; Shampoo fortalecedor; Shampoo controle de oleosidade; Shampoo hidratante; Shampoo nutritivo; Shampoo reconstrutor; Shampoo detox; Shampoo purificante; Shampoo low poo; Shampoo co-wash; Shampoo sólido; Shampoo para crescimento; Shampoo antiquebra; Shampoo matizador</span></td></tr>
+<tr><td class="cat-sub">CONDICIONADOR</td><td><span class="cat-examples">Condicionador hidratante; Condicionador nutritivo; Condicionador reconstrutor; Condicionador fortalecedor; Condicionador antiqueda; Condicionador anticaspa; Condicionador selante; Condicionador sem enxágue; Condicionador sólido; Condicionador matizador; Condicionador pós-coloração; Condicionador leave-in</span></td></tr>
+<tr><td class="cat-sub">TRATAMENTO</td><td><span class="cat-examples">Máscara capilar; Tônicos capilares; Séruns capilares; Mousse; Esfoliante capilar; Pré- shampoo; Booster capilar; Ampola de tratamento; óleo capilar; Óleo reparador de pontas; Óleos capilares; Elixir capilar; Protetor térmico; Protetor solar capilar; Protetor antipoluição; Protetor de cor; Creme noturno capilar; Máscara noturna capilar; Acidificante pós-química; Balm capilar; Soro capilar; Máscara pós-química; Máscara nutritiva; Máscara hidratante; Máscara reconstrutora; Máscara fortalecedora; Máscara seladora; Máscara pós-química; Máscara matizadora; Máscara pós-coloração</span></td></tr>
+<tr><td class="cat-sub">PRODUTOS MULTIFUNCIONAIS</td><td><span class="cat-examples">Produto 2 em 1; Produto 3 em 1; Creme multifuncional</span></td></tr>
+<tr><td class="cat-sub">FINALIZAÇÃO</td><td><span class="cat-examples">Leave-in; Leave-on; Óleo finalizador; Reparador de pontas; Cera modeladora; Gel; Mousse; Spray fixador; Creme para pentear; Ativador de cachos; Definidor de ondas; Modelador capilar; Definidor de cachos; Umidificador de cachos; Anti-frizz; Gelatina</span></td></tr>
+<tr><td class="cat-sub">COLORAÇÃO</td><td><span class="cat-examples">Tinta para cabelos; Tintura permanente; Coloração semipermanente; Coloração temporária; Tonalizante; Máscara tonalizante</span></td></tr>
+<tr><td class="cat-sub">DESCOLORAÇÃO</td><td><span class="cat-examples">Pó descolorante; Água oxigenada (OX); Creme descolorante</span></td></tr>
+</tbody></table>
+<h2 id="cat-higiene-pessoal" class="cat-heading">Higiene Pessoal</h2>
+<table class="cat-table">
+<thead><tr><th>Subcategoria</th><th>Exemplos</th></tr></thead>
+<tbody>
+<tr><td class="cat-sub">SABONETE</td><td><span class="cat-examples">Sabonete glicerinado; Sabonete Vegetal; Sabonete esfoliante; Sabonete antisséptico; Sabonete anticacteriano; Sabonete Hidratante; Sabonete clareador; Sabonete calmante; Sabonete neutro; Sabonete fitoterápico</span></td></tr>
+<tr><td class="cat-sub">DESODORANTE</td><td><span class="cat-examples">Desodorante; Antitranspirante; Desodorante antitranspirante; Desodorante refrescante; Desodorante clínico; Desodorante sem perfume; Desodorante proteção 24 H; Desodorante Proteção 48h; Desodorante Proteção 72h; Desodorante proteção prolongada; Desodorante sem alumínio; Desodorante Antibacteriano; Desodorante Hidratante; Desodorante Calmante; Desodorante Antimanchas; Desodorante clareador de axilas; Desodorante Unissex; Desodorante hipoalergêncio; Desodorante cristal</span></td></tr>
+<tr><td class="cat-sub">CREMES DENTAIS</td><td><span class="cat-examples">Creme dental sem fluor; Creme dental para dentes sensíveis; Creme dental braqueador; Creme dental Anticáries; Creme dental Antiplaca; Creme dental Antitártaro; Creme dental Antigengivite; Creme dental Antibacteriano; Creme dental total care; Creme dental</span></td></tr>
+<tr><td class="cat-sub">PRODUTOS INTÍMOS</td><td><span class="cat-examples">Sabonetes intímos; Spray intímo; Espuma íntima de limpeza; Hidratante íntimo; Gel íntimo hidratante; Creme íntimo calmante; Sérum íntimo; Calmante pós-depilação íntima; Lenços íntimos; Talco íntimo</span></td></tr>
+<tr><td class="cat-sub">DEPILAÇÃO</td><td><span class="cat-examples">Creme depilatório corporal; Creme depilatório facial; Creme depilatório íntimo externo; Loção depilatória; Espuma depilatória; Loção pré-depilatória; Esfoliante pré-depilação; Gel pós-depilatório; Loção pós-depilatória; Creme pós-depilação; Balm calmante; Spray calmante; Óleo pós-depilação</span></td></tr>
+<tr><td class="cat-sub">ENXAGUANTE BUCAL</td><td><span class="cat-examples">Enxaguante  bucal Antisséptico; Enxaguante  bucal Antibacteriano; Enxaguante  bucal Anticáries; Enxaguante  bucal Antiplaca; Enxaguante  bucal Antitártaro; Enxaguante  bucal saúde da gengiva; Enxaguante bucal branqueador; Enxaguante buca hálito fresco</span></td></tr>
+<tr><td class="cat-sub">SPRAY BUCAL</td><td></td></tr>
+<tr><td class="cat-sub">LENÇOS UMEDECIDOS</td><td><span class="cat-examples">Lenços umedecidos higiênicos; Lenços umedecidos íntimos; Lenços umedecidos corporais</span></td></tr>
+<tr><td class="cat-sub">TALCO</td><td><span class="cat-examples">Talco antisséptico; Talco corporal; Talco para pés; Talco para axilas; Talco antifricção; Talco desodorante; Talco pós-banho</span></td></tr>
+<tr><td class="cat-sub">Antisséptico para as mãos</td><td></td></tr>
+</tbody></table>
+<h2 id="cat-perfume" class="cat-heading">Perfume</h2>
+<table class="cat-table">
+<thead><tr><th>Subcategoria</th><th>Exemplos</th></tr></thead>
+<tbody>
+<tr><td class="cat-sub">Feminino</td><td></td></tr>
+<tr><td class="cat-sub">Masculino</td><td></td></tr>
+<tr><td class="cat-sub">Unissex</td><td></td></tr>
+<tr><td class="cat-sub">BODY SPLASH</td><td><span class="cat-examples">Feminino; Masculino; Unissex; Floral; Adocicado; Cítrico; Frutado; Doce; Fresco</span></td></tr>
+</tbody></table>
+<h2 id="cat-cuidados-corporais" class="cat-heading">Cuidados Corporais </h2>
+<table class="cat-table">
+<thead><tr><th>Subcategoria</th><th>Exemplos</th></tr></thead>
+<tbody>
+<tr><td class="cat-sub">CREMES CORPORAIS</td><td><span class="cat-examples">Creme corporal hidratante nutritivo; Creme croporal hidratante reparador; Creme corporal calmante; Creme corporal  revitalizante; Hidrantante corporal refrescante; Hidratante croporal firmador; Hidratante corporal antiestrias; Hidratante corporal antioxidante; Hidrantante corporal Anti-idade; Hidratante redutor de celulite; Hidratante clareador corporal; Hidratante uniformizador do tom; Creme firmador corporal; Creme redutor de flacidez; Creme tonificante; Creme modelador corporal; Manteiga corporal hidratante; Manteiga corporal nutritiva; Manteiga corporal reparadora; Manteiga corporal firmadora; Manteiga corporal revitalizante; Manteiga corporal antioxidante</span></td></tr>
+<tr><td class="cat-sub">Produtos para as mãos</td><td><span class="cat-examples">Creme Hidratante para mãos; Creme Nutritivo para mãos; Creme Reparador para mãos; Creme Ultra-hidratante para mãos; Creme Antirressecamento para mãos; Creme Antienvelhecimento / anti-idade para mãos; Creme Uniformizador do tom para mãos</span></td></tr>
+<tr><td class="cat-sub">Produtos para os pés</td><td><span class="cat-examples">Creme hidratante para pés; Creme nutritivo para pés; Creme reparador para pés; Creme Ultra-hidratante para pés; Creme Antirressecamento para pés; Creme Antirrachaduras para pés; Creme Anticalosidade para pés; Creme para calcanhares</span></td></tr>
+<tr><td class="cat-sub">PRODUTOS PARA CELULITE</td><td><span class="cat-examples">Creme anticelulite; Óleo anticelulite; Creme para celulites termogênico; Creme para celulites termogênico; Creme redutor de celulite</span></td></tr>
+<tr><td class="cat-sub">PRODUTOS PARA ESTRIAS</td><td><span class="cat-examples">Creme antiestrias; Óleo antiestrias; Creme para preveção de estrias; Manteiga corporal antiestrias; Creme redutor de estrias</span></td></tr>
+<tr><td class="cat-sub">REPELENTES</td><td><span class="cat-examples">Repelente corporal; Repelente infantil; Repelente facial</span></td></tr>
+<tr><td class="cat-sub">ESFOLIANTES CORPORAIS</td><td><span class="cat-examples">Esfoliante corporal renovador; Esfoliante corporal hidratante; Esfoliante corporal nutritivo; Esfoliante corporal detox; Esfoliante corporal antirressecamento; Esfoliante corporal com cafeína; Esfoliante corporal com açucar</span></td></tr>
+<tr><td class="cat-sub">ARGILAS</td><td><span class="cat-examples">Argila verde; Argila branca; Argila preta; Argila rosa; Argila vermelha; Argila amarela; Argila roxa; Argila azul</span></td></tr>
+</tbody></table>
+<h2 id="cat-prote-o-solar" class="cat-heading">Proteção Solar</h2>
+<table class="cat-table">
+<thead><tr><th>Subcategoria</th><th>Exemplos</th></tr></thead>
+<tbody>
+<tr><td class="cat-sub">PROTETOR SOLAR FACIAL</td><td><span class="cat-examples">Protetor solar facial; Protetor solar facial com cor; Protetor solar mineral; Protetor solar híbrido; Protetor labial com FPS; Protetor solar facial matte; Protetor solar facial Ultra-matte; Protetor solar facil glow; Protetor solar facial antioliosidade; Protetor solar facial  toque seco; Protetor solar facial resistente à àgua; Protetor solar facial  antibrilho; Protetor solar facial  antiidade; Protetor solar facial  Antiacne; Protetor solar facial uniformizador; Protetor solar facial hidratante; Protetor solar facial esportivo; Protetor solar facial resistente ao suor; Protetor Solar Facial  FPS 15; Protetor Solar Facial FPS 30; Protetor Solar Facial  FPS 50; Protetor Solar Facial  FPS 60+; Protetor Solar Facial UVA / UVB; Protetor Solar Facial  FPS 70; Protetor Solar Facial  FPS 90; Protetor Solar Facial  FPS 100</span></td></tr>
+<tr><td class="cat-sub">PROTETOR SOLAR CORPORAL</td><td><span class="cat-examples">Protetor Solar Corporal FPS 15; Protetor Solar Corporal FPS 30; Protetor Solar Corporal FPS 50; Protetor Solar Corporal FPS 60+; Protetor Solar Corporal UVA / UVB; Protetor Solar Corporal Amplo Espectro; Protetor Solar Corporal Químico; Protetor Solar Corporal Físico (Mineral); Protetor Solar Corporal Misto; Protetor Solar Corporal Com Óxido de Zinco; Protetor Solar Corporal Com Dióxido de Titânio; Protetor Solar Corporal Resistente ao Suor; Protetor Solar Corporal Esportivo; Protetor Solar Corporal Resistente ao Suor; Protetor Solar Corporal Praia e Piscina; Protetor Solar Corporal Esportivo; Protetor Solar Corporal Hidratante; Protetor Solar Corporal Antioxidante; Protetor Solar Corporal Calmante; Protetor Solar Corporal Sem Fragrância; Protetor Solar Corporal Hipoalergênico; Protetor Solar Coporal FPS 70; Protetor Solar Coporal FPS 90; Protetor Solar Coporal  FPS 100</span></td></tr>
+</tbody></table>
+<h2 id="cat-produtos-masculinos" class="cat-heading">Produtos Masculinos</h2>
+<table class="cat-table">
+<thead><tr><th>Subcategoria</th><th>Exemplos</th></tr></thead>
+<tbody>
+<tr><td class="cat-sub">CUIDADOS COM A BARBA</td><td><span class="cat-examples">Pós  Barba; Espuma de barbear; Gel de barbear; Creme de barbear; Óleo para barba; Sabonete para a barba; Shampoo para a barba; Balm para barba; Creme hidratante para barba; Sérum para barba; Pomada para barba; Pós-barba calmante</span></td></tr>
+<tr><td class="cat-sub">Creme depilatório corporal</td><td></td></tr>
+<tr><td class="cat-sub">HIDRATANTE CORPORAL</td><td></td></tr>
+<tr><td class="cat-sub">SHAMPOOS</td><td><span class="cat-examples">Shampoo; Shampoo hidratante; Shampoo antirresíduo; Shampoo anticaspa; Shampoo antirresíduo; Shampoo antiqueda; Shampoo fortalecedor; Shampoo antioleosidade</span></td></tr>
+<tr><td class="cat-sub">CONDICIONADOR</td><td><span class="cat-examples">Condicionador hidratante; Condicionador nutritivo; Condicionador reconstrutor; Condicionador fortalecedor; Condicionador antiqueda; Condicionador anticaspa</span></td></tr>
+<tr><td class="cat-sub">TRATAMENTO CAPILAR</td><td><span class="cat-examples">Máscara capilar; Tônicos capilares; Séruns capilares; Mousse</span></td></tr>
+<tr><td class="cat-sub">MULTIFUNCIONAL</td><td><span class="cat-examples">Shampoo 2 em 1 (barba e cabelo); Shampoo 2 em 1(shampoo+condicionador); Shampoo 3 em 1</span></td></tr>
+<tr><td class="cat-sub">FINALIZAÇÃO</td><td><span class="cat-examples">Leave-in; Leave-on; Óleos capilares; Reparador de pontas; Cera modeladora; Gel fixador; Mousse; Spray fixador; Pomadas modeladoras</span></td></tr>
+<tr><td class="cat-sub">LIMPEZA FACIAL</td><td><span class="cat-examples">Gel de limpeza facial; Sabonete facial; Espuma de limpeza; Água micelar; Água termal; Cleansing oil; Cleansing balm</span></td></tr>
+<tr><td class="cat-sub">Pele/ Skincare</td><td><span class="cat-examples">Séruns; Hidratantes faciais; Hidratante em gel; Hidratante em creme; Produtos antiacne; Secativos para espinhas; Produtos anti-idade; Creme para a área dos olhos; Máscaras faciais; Protetor solar facial; Brumas faciais; Esfoliantes faciais</span></td></tr>
+<tr><td class="cat-sub">DESODORANTES MASCULINOS</td><td><span class="cat-examples">Desodorante; Antitranspirante; Desodorante antitranspirante; Desodorante refrescante; Desodorante clínico; Desodorante sem perfume; Desodorante proteção 24 H; Desodorante Proteção 48h; Desodorante Proteção 72h; Desodorante proteção prolongada; Desodorante sem alumínio; Desodorante Antibacteriano; Desodorante Hidratante; Desodorante Calmante; Desodorante Antimanchas; Desodorante clareador de axilas; Desodorante hipoalergêncio</span></td></tr>
+<tr><td class="cat-sub">PRODUTOS INTÍMOS MASCULINOS</td><td><span class="cat-examples">Sabonetes intímos; Spray intímo; Espuma íntima de limpeza; Hidratante íntimo; Gel íntimo hidratante; Creme íntimo calmante; Sérum íntimo; Calmante pós-depilação íntima; Lenços íntimos; Talco íntimo</span></td></tr>
+</tbody></table>
+<h2 id="cat-produtos-infantis-baby-care" class="cat-heading">Produtos Infantis / (Baby Care)</h2>
+<table class="cat-table">
+<thead><tr><th>Subcategoria</th><th>Exemplos</th></tr></thead>
+<tbody>
+<tr><td class="cat-sub">SHAMPOO</td><td><span class="cat-examples">Shampoo infantil  Sem lágrimas; Shampoo infantil  hipoalergênico; Shampoo infantil  dermatologicamente testado; Shampoo infantil  oftalmologicamente testado; Shampoo infantil sem fragrância; Shampoo infantil  hidratante; Shampoo infantil  suave; Shampoo infantil calmante; Shampoo infantil nutritivo</span></td></tr>
+<tr><td class="cat-sub">CONDICIONADOR</td><td><span class="cat-examples">Condicionador infantil hipoalergênico; Condicionador infantil para pele sensível; Condicionador infantil dermatologicamente testado; Condicionador infantil oftalmologicamente testado; Condicionador infantil sem fragância; Condicionador desembaraçante; Condicionador infantil hidratante; Condicionador infantil calmante; Condicionador infantil nutritivo</span></td></tr>
+<tr><td class="cat-sub">FINALIZADOR PARA CABELO</td><td><span class="cat-examples">Creme para pentear infantil; Leave-in infantil; Ativador de cachos infantil; Creme desembaraçante infantil; Gel leve infantil; Mousse infant</span></td></tr>
+<tr><td class="cat-sub">SABONETES</td><td><span class="cat-examples">Sabonete infantil hipoalergênico; Sabonete infantil para pele sensível; Sabonete infantil hidratante; Sabonete infantil suave; Sabonete infantil suave</span></td></tr>
+<tr><td class="cat-sub">CREMES PARA ASSADURAS</td><td><span class="cat-examples">Creme antiassaduras; Creme para assaduras hipoalergênico; Creme para assaduras sem fragrância; Creme para assaduras preventivo; Creme para assaduras reparador; Creme para assaduras uso diário; Creme para assaduras uso noturno; Creme para assaduras com óxido de zinco; Creme para assaduras com dexpantenol; Creme para assaduras com dexpantenol; Creme para assaduras com calêndula; Creme para assaduras com aloe vera</span></td></tr>
+<tr><td class="cat-sub">COLÔNIAS INFANTIS</td><td><span class="cat-examples">Colônia infantil sem álcool; Colônia infantil hipoalergênica; Colônia infantil camomila; Colônia infantil floral suave; Colônia infantil floral; Colônia infantil frutal; Colônia infantil cítrica; Colônia infantil lavanda</span></td></tr>
+<tr><td class="cat-sub">HIDRANTATES</td><td><span class="cat-examples">Hidratante hipoalergênico; Hidratante para pele sensível; Hidratante dermatologicamente testado; Hidratante sem fragrância; Hidratante calmante; Hidratante reparador; Hidratante para pele ressecada</span></td></tr>
+<tr><td class="cat-sub">PROTETOR SOLAR INFANTIL</td><td><span class="cat-examples">Protetor solar infantil FPS 30; Protetor solar infantil FPS 50; Protetor solar infantil FPS 60+; Protetor solar infantil amplo espectro (UVA/UVB); Protetor solar infantil físico/mineral; Protetor solar infantil químico; Protetor solar infantil hipoalergênico; Protetor solar infantil para pele sensível; Protetor solar infantil dermatologicamente testado; Protetor solar infantil oftalmologicamente testado; Protetor solar infantil sem fragrância; Protetor solar infantil resistente à água; Protetor solar infantil muito resistente à água</span></td></tr>
+<tr><td class="cat-sub">DESODORANTE INFANTIL</td><td><span class="cat-examples">Desodorante infantil neutralizador de odores; Desodorante infantil proteção diária; Desodorante infantil hipoalergênico; Desodorante infantil dermatologicamente testado; Desodorante infantil sem álcool; Desodorante infantil sem fragrância; Desodorante infantil sem alumínio; Desodorante infantil pré-adolescente</span></td></tr>
+<tr><td class="cat-sub">CREME DENTAL INFANTIL</td><td><span class="cat-examples">Pasta de dente infantil para bebê; Pasta de dente infantil 0–2 anos; Pasta de dente infantil 3–5 anos; Pasta de dente infantil 6+ anos; Pasta de dente infantil com flúor; Pasta de dente infantil sem flúor; Pasta de dente infantil baixo flúor; Pasta de dente infantil com cálcio; Pasta de dente infantil com xilitol; Pasta de dente infantil anticáries; Pasta de dente infantil fortalecimento do esmalte; Pasta de dente infantil controle de placa</span></td></tr>
+<tr><td class="cat-sub">ENXAGUANTE BUCAL INFANTIL</td><td></td></tr>
+<tr><td class="cat-sub">LENÇO UMEDECIDO</td><td><span class="cat-examples">Lenços umedecidos infantis para higiene diária; Lenços umedecidos infantis para troca de fraldas; Lenços umedecidos infantis para limpeza suave; Lenços umedecidos infantis calmantes; Lenços umedecidos infantis hipoalergênicos; Lenços umedecidos infantis para pele sensível; Lenços umedecidos infantis dermatologicamente testados; Lenços umedecidos infantis sem álcool; Lenços umedecidos infantis sem fragrância; Lenços umedecidos infantis com aloe vera; Lenços umedecidos infantis com camomila; Lenços umedecidos infantis com calêndula; Lenços umedecidos infantis hidratantes; Lenços umedecidos infantis calmantes</span></td></tr>
+<tr><td class="cat-sub">ÓLEO CORPORAL PARA BEBÊ</td><td><span class="cat-examples">Óleo corporal para bebê hidratante; Óleo corporal para bebê nutritivo; Óleo corporal para bebê calmante; Óleo corporal para bebê protetor; Óleo corporal para bebê reparador; Óleo corporal para bebê hipoalergênico; Óleo corporal para bebê dermatologicamente testado; Óleo corporal para bebê para massagem; Óleo corporal para bebê pós-banho; Óleo corporal para bebê uso diário; Óleo corporal para bebê com óleo de amêndoas; Óleo corporal para bebê com óleo de coco; Óleo corporal para bebê com óleo de girassol; Óleo corporal para bebê com calêndula; Óleo corporal para bebê com camomila; Óleo corporal para bebê com vitamina E</span></td></tr>
+<tr><td class="cat-sub">MULTIFUNCIONAIS</td><td><span class="cat-examples">Shampoo e condicionador bebê (2 em 1); Shampoo e condicionador bebê (2 em 1); Cabeça aos Pés ( 3 em 1)</span></td></tr>
+<tr><td class="cat-sub">TRATAMENTO FACIAL</td><td><span class="cat-examples">Hidratante para o rosto; Sabonete facial</span></td></tr>
+<tr><td class="cat-sub">Talco</td><td></td></tr>
+</tbody></table>
+<h2 id="cat-cuidados-com-as-unhas" class="cat-heading">Cuidados com as unhas </h2>
+<table class="cat-table">
+<thead><tr><th>Subcategoria</th><th>Exemplos</th></tr></thead>
+<tbody>
+<tr><td class="cat-sub">ESMALTES</td><td><span class="cat-examples">Esmalte cremoso; Esmalte cintilante; Esmalte perolado; Esmalte metálico; Esmalte glitter; Esmalte fosco; Esmalte neon; Esmalte duochrome; Esmalte de secagem rápida; Esmalte longa duração; Esmalte efeito gel; Esmalte free; Esmalte hipoalergênico; Esmalte fortalecedor; Esmalte nutritivo; Esmalte antiquebra; Esmalte para unhas fracas; Esmalte com queratina; Base fortalecedora; Base nutritiva; Base hidratante; Base niveladora; Base endurecedora; Base para unhas fracas; Base com cálcio; Base com queratina; Base com biotina; Base com vitaminas; Base com biotina; Base com óleo de argan; Base free; Base hipoalergênica; Top coat brilho; Top coat extra brilho; Top coat fosco; Top coat efeito gel; Top coat fosco (matte); Top coat selante; Top coat efeito gel; Top coat fortalecedor; Top coat de secagem rápida; Top coat longa duração; Extra brilho secagem rápida; Extra brilho longa duração; óleo secante</span></td></tr>
+<tr><td class="cat-sub">ESMALTES HIPOALERGÊNICOS</td><td></td></tr>
+<tr><td class="cat-sub">REMOVEDORES</td><td><span class="cat-examples">Acetona; Removedor de esmalte suave; Removedor de esmalte suave</span></td></tr>
+<tr><td class="cat-sub">CUTÍCULAS</td><td><span class="cat-examples">Óleo de cutícula; Creme para cutículas; Amolecedor de cutículas; Removedor de cutículas; Hidratante para cutículas; Óleo para cutículas; Creme para cutículas</span></td></tr>
+</tbody></table>
+<h2 id="cat-aromaterapia-bem-estar" class="cat-heading">Aromaterapia & Bem-estar</h2>
+<table class="cat-table">
+<thead><tr><th>Subcategoria</th><th>Exemplos</th></tr></thead>
+<tbody>
+<tr><td class="cat-sub">SAIS DE BANHO</td><td><span class="cat-examples">Sais de Banho Relaxantes; Sais de Banho Energizantes; Sais de Banho Terapêuticos; Sais de Banho Aromaterapêuticos; Sais de Banho Detox; Sais de Banho Hidratantes; Sais de Banho Esfoliantes; Sais de Banho Efervescentes; Sais de Banho para Escalda-Pés; Sais de Banho para Banho de Imersão</span></td></tr>
+<tr><td class="cat-sub">GEL DE BANHO</td><td></td></tr>
+<tr><td class="cat-sub">ÓLEOS DE BANHO</td><td><span class="cat-examples">Óleo de banho com óleo de amêndoas; Óleo de banho com óleo de coco; Óleo de banho com óleo de argan; Óleo de banho com óleo de jojoba; Óleo de banho com manteigas vegetais; Óleo de banho hidratante; Óleo de banho nutritivo; Óleo de banho calmante; Óleo de banho relaxante; Óleo de banho revitalizante; Óleo de Banho Higienizante; Óleo Pós-Banho; Óleo para Imersão; Shower Oil</span></td></tr>
+<tr><td class="cat-sub">ÓLEOS ESSENCIAIS</td><td><span class="cat-examples">Óleo Essencial de Lavanda; Óleo Essencial de Gerânio; Óleo Essencial de Olíbano (Frankincense); Óleo Essencial de Camomila; Óleo Essencial de Olíbano (Frankincense); Óleo essencial de Tea Tree (Melaleuca); Óleo Essencial de Helichrysum (Sempre-viva); Óleo Essencial de Ylang Ylang; Óleo Essencial de Sândalo; Óleo Essencial de Patchouli; Óleo Essencial de Copaíba; Óleo essencial de Néroli</span></td></tr>
+<tr><td class="cat-sub">ÓLEOS VEGETAIS</td><td><span class="cat-examples">Óleo de Jojoba; Óleo de Rosa Mosqueta; Óleo de Argan; Óleo de Semente de Uva; Óleo de Amêndoas Doces; Óleo de Coco; Óleo de Girassol; Óleo de Abacate; Óleo de Marula; Óleo de Esqualano vegetal; Óleo de Tamanu; Óleo de Pracaxi; Óleo de Açaí; Óleo de Framboesa; Óleo de Cânhamo; Óleo de Cártamo; Óleo de Nigella Sativa; Óleo de Arroz; Óleo de Bakuchiol; Óleo de Buriti; Óleo de Patauá; Óleo de Andiroba; Óleo de Kukui; Óleos Prensados a Frio; Óleos Protetores da Barreira Cutânea; Óleos Antioxidantes; Óleos Seborreguladores; Óleos Anti-idade; Óleos Regeneradores; Óleos hidratantes</span></td></tr>
+<tr><td class="cat-sub">MANTEIGAS VEGETAIS</td><td><span class="cat-examples">Manteiga de Karité; Manteiga de Cacau; Manteiga de Cupuaçu; Manteiga de Murumuru; Manteiga de Manga; Manteiga de Illipé; Manteiga de Kokum; Manteiga de Tucumã; Manteiga de Ucuuba; Manteiga de Bacuri; Manteigas Hidratantes; Manteigas Regeneradoras; Manteigas Antioxidantes; Manteigas Reparadoras</span></td></tr>
+</tbody></table>
+<h2 id="cat-praia" class="cat-heading">Praia</h2>
+<table class="cat-table">
+<thead><tr><th>Subcategoria</th><th>Exemplos</th></tr></thead>
+<tbody>
+<tr><td class="cat-sub">BRONZEADOR</td><td><span class="cat-examples">Bronzeador com FPS; Bronzeador Acelerador do Bronzeado; Bronzeador Autobronzeador; Bronzeador Resistente à Água; Bronzeador Hidratante</span></td></tr>
+<tr><td class="cat-sub">PROTETOR SOLAR LABIAL</td><td><span class="cat-examples">Protetor Solar Labial FPS 15; Protetor Solar Labial FPS 30; Protetor Solar Labial FPS 50; Protetor Solar Labial FPS 60+; Protetor sola labial sem cor; Protetor solar labial com cor; Protetor Solar Labial Hidratante; Protetor Solar Labial Reparador</span></td></tr>
+<tr><td class="cat-sub">PÓS-SOL</td><td><span class="cat-examples">Pós-Sol Calmante; Pós-Sol Refrescante; Pós-Sol Hidratante; Pós-Sol Reparador; Pós-Sol Anti-vermelhidão; Pós-Sol Pós-queimadura; Pós-Sol Prolongador do Bronzeado; Pós-Sol Com Aloe Vera; Pós-Sol Com Pantenol; Pós-Sol Com Calêndula; Pós-Sol Com Camomila; Pós-Sol Com Mentol; Hidratantes refrescantes</span></td></tr>
+<tr><td class="cat-sub">CREME DE PENTEAR COM PROTEÇÃO UV</td><td><span class="cat-examples">Creme de Pentear com Proteção UV; Leave-in com Proteção UV; Creme para Pentear sem Enxágue com Proteção UV; Creme de Pentear com Proteção UV Antifrizz; Creme de Pentear com Proteção UV Protetor da Cor</span></td></tr>
+</tbody></table>
+<h2 id="cat-gestantes-lactantes" class="cat-heading">Gestantes & Lactantes</h2>
+<table class="cat-table">
+<thead><tr><th>Subcategoria</th><th>Exemplos</th></tr></thead>
+<tbody>
+<tr><td class="cat-sub">CREME PARA ESTRIAS</td><td><span class="cat-examples">Prevenção de estrias; Creme para Estrias Gestante Preventivo; Creme para Estrias Gestante Redutor de Estrias; Creme para Estrias Gestante Hidratante; Creme para Estrias Gestante Regenerador; Creme para Estrias Gestante Firmador da Pele; Óleo Corporal Antiestrias Gestante</span></td></tr>
+<tr><td class="cat-sub">ÓLEOS CORPORAIS</td><td></td></tr>
+<tr><td class="cat-sub">HIDRATANTES CORPORAIS</td><td><span class="cat-examples">Hidratante Corporal Gestante Hidratação Intensa; Hidratante Corporal Gestante Prevenção de Estrias; Hidratante Corporal Gestante Melhora da Elasticidade; Hidratante Corporal Gestante Regenerador; Hidratante Corporal Gestante Firmador da Pele; Hidratante Corporal Gestante Calmante; Hidratante Corporal Gestante Anti-ressecamento</span></td></tr>
+<tr><td class="cat-sub">PRODUTOS PARA ALÍVIO DE INCHAÇO</td><td><span class="cat-examples">Creme Alívio de Inchaço Gestante Estimulador da Circulação; Creme Alívio de Inchaço Gestante Relaxante; Creme Alívio de Inchaço Gestante Redutor de Sensação de Peso</span></td></tr>
+<tr><td class="cat-sub">SABONETE INTIMOS</td><td><span class="cat-examples">Sabonete Íntimo Gestante Equilíbrio do pH Íntimo; Sabonete Íntimo Gestante Calmante; Sabonete Íntimo Gestante Refrescante Suave; Sabonete Íntimo Gestante Proteção da Flora Íntima</span></td></tr>
+</tbody></table>
+<h2 id="cat-cuidados-para-sobrancelha-e-c-lios" class="cat-heading">Cuidados para sobrancelha e cílios </h2>
+<table class="cat-table">
+<thead><tr><th>Subcategoria</th><th>Exemplos</th></tr></thead>
+<tbody>
+<tr><td class="cat-sub">CRESCIMENTO</td><td><span class="cat-examples">Séruns para crescimento sobrancelha; óleos para crescimento sobrancelha; Séruns para crescimento cílios; óleos para crescimento cílios</span></td></tr>
+<tr><td class="cat-sub">FORTALECEDORES</td><td><span class="cat-examples">Máscara fortalecedora</span></td></tr>
+<tr><td class="cat-sub">DESIGN DE SOBRANCELHA</td><td><span class="cat-examples">Gel Fixador para Sobrancelhas; Cera Modeladora para Sobrancelhas; Máscara Incolor para Cílios; Gel Incolor para Cílios; Cola para cílios</span></td></tr>
+<tr><td class="cat-sub">TINTURA</td><td><span class="cat-examples">Tinturas para cílios; Tinturas para  sobrancelhas; Coloração Vegetal para Sobrancelhas; Coloração em Gel para Sobrancelhas; Coloração em Creme para Sobrancelhas; Oxidante para Tintura de Sobrancelhas; Ativador de Cor para Sobrancelhas; Fixador de Tintura para Sobrancelhas; Óleo Protetor para Contorno da Sobrancelha; Calmante Pós-Tintura para Sobrancelhas; Hidratante Pós-Tintura para Sobrancelhas</span></td></tr>
+<tr><td class="cat-sub">LIMPEZA</td><td><span class="cat-examples">Demaquilante para Sobrancelhas e Cílios; Shampoo para Sobrancelhas; Shampoo para Cílios; Espuma de Limpeza para Sobrancelhas e Cílios</span></td></tr>
+</tbody></table>
+
+<div class="page-footer-nav"><a href="/beclean/instrucoes_workers/tarefa-1/" class="pfn-prev"><span class="pfn-k">← anterior</span><span class="pfn-v">Tarefa 1</span></a><a href="/beclean/instrucoes_workers/problemas/" class="pfn-next"><span class="pfn-k">próxima →</span><span class="pfn-v">FAQ</span></a></div>
+    </article>
+    <aside class="toc-side" aria-label="Sumário lateral">
+      <div class="toc-side-inner">
+        <div class="eyebrow"><span class="bar"></span>nesta página</div>
+        <ol class="toc-list">
+        <li class="toc-h2"><a href="#cat-pele-skincare"><span class="t">Pele (Skincare)</span></a></li>
+        <li class="toc-h2"><a href="#cat-maquiagem"><span class="t">Maquiagem</span></a></li>
+        <li class="toc-h2"><a href="#cat-cabelos"><span class="t">Cabelos</span></a></li>
+        <li class="toc-h2"><a href="#cat-higiene-pessoal"><span class="t">Higiene Pessoal</span></a></li>
+        <li class="toc-h2"><a href="#cat-perfume"><span class="t">Perfume</span></a></li>
+        <li class="toc-h2"><a href="#cat-cuidados-corporais"><span class="t">Cuidados Corporais</span></a></li>
+        <li class="toc-h2"><a href="#cat-prote-o-solar"><span class="t">Proteção Solar</span></a></li>
+        <li class="toc-h2"><a href="#cat-produtos-masculinos"><span class="t">Produtos Masculinos</span></a></li>
+        <li class="toc-h2"><a href="#cat-produtos-infantis-baby-care"><span class="t">Produtos Infantis / (Baby Care)</span></a></li>
+        <li class="toc-h2"><a href="#cat-cuidados-com-as-unhas"><span class="t">Cuidados com as unhas</span></a></li>
+        <li class="toc-h2"><a href="#cat-aromaterapia-bem-estar"><span class="t">Aromaterapia & Bem-estar</span></a></li>
+        <li class="toc-h2"><a href="#cat-praia"><span class="t">Praia</span></a></li>
+        <li class="toc-h2"><a href="#cat-gestantes-lactantes"><span class="t">Gestantes & Lactantes</span></a></li>
+        <li class="toc-h2"><a href="#cat-cuidados-para-sobrancelha-e-c-lios"><span class="t">Cuidados para sobrancelha e cílios</span></a></li>
+        </ol>
+        <a href="#" class="toc-top" aria-label="Voltar ao topo">↑ topo</a>
+      </div>
+    </aside>
+  </div>
+</main>
+<footer class="site-footer">
+  <div class="shell-wide row">
+    <a href="https://novosite.baselabs.com.br/" aria-label="BASE/labs">
+      <img src="https://novosite.baselabs.com.br/logo-azul.webp" alt="BASE/labs">
+    </a>
+    <div class="legal">
+      <span>© 2026 BASE/labs · Braço de IA da BASE2</span>
+      <a href="mailto:hbarros@baselabs.com.br">Dúvidas: hbarros@baselabs.com.br</a>
+    </div>
+  </div>
+</footer>
+<script>
+// Category filter
+(() => {
+  const input = document.querySelector('.cat-filter');
+  if (!input) return;
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    document.querySelectorAll('.cat-heading').forEach(h2 => {
+      const table = h2.nextElementSibling;
+      if (!table) return;
+      const catMatch = !q || h2.textContent.toLowerCase().includes(q);
+      let visibleRows = 0;
+      table.querySelectorAll('tbody tr').forEach(tr => {
+        const match = catMatch || tr.textContent.toLowerCase().includes(q);
+        tr.classList.toggle('cat-hidden', !match);
+        if (match) visibleRows++;
+      });
+      const hide = q && !catMatch && visibleRows === 0;
+      h2.classList.toggle('cat-hidden', hide);
+      table.classList.toggle('cat-hidden', hide);
+    });
+  });
+})();
+
+(() => {
+  const headings = document.querySelectorAll('.content-body h2[id], .content-body h3[id], .content-body h4[id]');
+  const links = document.querySelectorAll('.toc-side a[href^="#"]');
+  if (!headings.length || !links.length) return;
+  const linkByHref = {};
+  links.forEach(a => { linkByHref[a.getAttribute('href')] = a; });
+  let activeId = null;
+  const setActive = (id) => {
+    if (id === activeId) return;
+    activeId = id;
+    links.forEach(a => a.classList.remove('active'));
+    const link = linkByHref['#' + id];
+    if (link) link.classList.add('active');
+  };
+  const visible = new Map();
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) visible.set(e.target.id, e.target);
+      else visible.delete(e.target.id);
+    });
+    const ids = [...visible.values()].sort((a,b) => a.offsetTop - b.offsetTop).map(el => el.id);
+    if (ids.length) setActive(ids[0]);
+  }, { rootMargin: '-130px 0px -70% 0px' });
+  headings.forEach(h => io.observe(h));
+})();
+</script>
+</body>
+</html>

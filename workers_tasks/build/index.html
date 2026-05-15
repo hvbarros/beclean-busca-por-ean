@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Início · Instruções para Workers — BeClean · BASE/labs</title>
+<meta name="description" content="Manual operacional dos workers BASE/labs alocados ao projeto BeClean — validação no Hub.">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500;1,600&display=swap">
+<link rel="icon" href="https://novosite.baselabs.com.br/favicon-32.webp" sizes="32x32" type="image/webp">
+<style>
+:root {
+  --bg: #f6f7f9;
+  --bg-1: #ffffff;
+  --bg-2: #eef0f4;
+  --fg: #14182a;
+  --fg-2: #404862;
+  --fg-3: #6a7488;
+  --brand: #3654ae;
+  --brand-2: #2a4490;
+  --brand-coral: #ff6e5a;
+  --line: #acb8ca;
+  --line-soft: #d1d7e0;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --r-3: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 15px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+.shell { width: min(960px, 100% - 48px); margin-inline: auto; }
+.shell-wide { width: min(1200px, 100% - 48px); margin-inline: auto; }
+
+/* Header */
+.site-header {
+  position: sticky; top: 0; z-index: 80;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: saturate(140%) blur(8px);
+  -webkit-backdrop-filter: saturate(140%) blur(8px);
+  border-bottom: 1px solid var(--line-soft);
+}
+.site-header .row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; height: 64px;
+}
+.site-header img { height: 28px; width: auto; }
+.site-header .crumbs { font-size: 12px; color: var(--fg-3); letter-spacing: 0.04em; }
+.site-header .crumbs a { color: var(--fg-2); text-decoration: none; }
+.site-header .crumbs a:hover { color: var(--brand); }
+
+/* Page nav (top tabs) */
+.page-nav {
+  position: sticky; top: 64px; z-index: 70;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--line-soft);
+}
+.page-nav ul {
+  display: flex; gap: 0;
+  margin: 0; padding: 0;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.page-nav ul::-webkit-scrollbar { display: none; }
+.page-nav li { flex-shrink: 0; }
+.page-nav li::before { content: none; }
+.page-nav a {
+  display: block;
+  padding: 14px 24px;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--fg-3);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+.page-nav a:hover { color: var(--fg-2); }
+.page-nav a.active { color: var(--brand); border-bottom-color: var(--brand); }
+
+/* Cover */
+.cover {
+  padding: clamp(48px, 8vw, 88px) 0 clamp(28px, 5vw, 56px);
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--bg-1);
+}
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--fg-3); letter-spacing: 0.04em;
+  text-transform: lowercase; margin-bottom: 20px;
+}
+.eyebrow .bar { width: 24px; height: 2px; background: var(--brand); display: inline-block; }
+.cover h1 {
+  font-family: var(--mono);
+  font-size: clamp(32px, 5.4vw, 60px);
+  font-weight: 700;
+  line-height: 1.0;
+  letter-spacing: -0.03em;
+  margin: 0 0 24px;
+  color: var(--fg);
+  max-width: 22ch;
+}
+.cover h1 em { font-style: italic; font-weight: 400; color: var(--brand); }
+.cover .meta {
+  margin-top: 36px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px 32px;
+  font-size: 13px;
+}
+.cover .meta .k { color: var(--fg-3); text-transform: lowercase; letter-spacing: 0.04em; }
+.cover .meta .v { color: var(--fg); margin-top: 4px; }
+.cover .meta a { color: var(--brand); text-decoration: none; }
+.cover .meta a:hover { text-decoration: underline; }
+
+/* Content + sidebar layout */
+.content { padding: clamp(40px, 6vw, 80px) 0 clamp(56px, 8vw, 120px); }
+.content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  gap: 64px;
+  align-items: start;
+}
+.content-body { min-width: 0; }
+
+/* Content typography */
+.content-body h1 { display: none; }
+.content-body h2 {
+  font-family: var(--mono);
+  font-size: clamp(22px, 2.6vw, 30px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 64px 0 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line-soft);
+  color: var(--fg);
+  scroll-margin-top: 130px;
+}
+.content-body > h2:first-of-type { margin-top: 0; border-top: 0; padding-top: 0; }
+.content-body h3 {
+  font-family: var(--mono);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 36px 0 12px;
+  color: var(--fg);
+  scroll-margin-top: 130px;
+}
+.content-body h3::before { content: "// "; color: var(--brand); font-weight: 400; }
+.content-body h4 {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+  color: var(--fg-2);
+  margin: 24px 0 8px;
+  scroll-margin-top: 130px;
+}
+.content-body p, .content-body li { font-size: 15px; color: var(--fg-2); line-height: 1.7; }
+.content-body p { margin: 12px 0; }
+.content-body ul, .content-body ol { padding-left: 24px; margin: 12px 0; }
+.content-body ul li { list-style: none; position: relative; }
+.content-body ul li::before { content: "—"; position: absolute; left: -22px; color: var(--brand); }
+.content-body ol { padding-left: 28px; }
+.content-body ol li { padding-left: 4px; }
+.content-body ol li::marker { color: var(--brand); font-weight: 500; }
+.content-body strong { color: var(--fg); font-weight: 600; }
+.content-body em { color: var(--fg); font-style: italic; }
+.content-body a {
+  color: var(--brand); text-decoration: underline;
+  text-decoration-thickness: 1px; text-underline-offset: 2px;
+}
+.content-body a:hover { color: var(--brand-2); }
+.content-body code {
+  font-family: var(--mono);
+  background: var(--bg-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.92em;
+  color: var(--fg);
+}
+.content-body pre {
+  background: #0e1224;
+  border: 1px solid var(--brand-2);
+  border-radius: var(--r-3);
+  padding: 18px 22px;
+  overflow-x: auto;
+  margin: 20px 0;
+  position: relative;
+}
+.content-body pre::before {
+  content: "// prompt";
+  position: absolute; top: -10px; left: 16px;
+  background: #0e1224;
+  padding: 0 8px;
+  font-size: 11px;
+  color: #9edc37;
+  letter-spacing: 0.06em;
+}
+.content-body pre code {
+  background: transparent; border: 0; padding: 0;
+  color: #d1d7e0; font-size: 13px; line-height: 1.65;
+  white-space: pre-wrap;
+}
+.content-body hr { display: none; }
+.content-body blockquote {
+  border-left: 2px solid var(--brand);
+  background: var(--bg-1);
+  padding: 14px 20px;
+  margin: 16px 0;
+  color: var(--fg-2);
+  border-radius: 0 var(--r-3) var(--r-3) 0;
+}
+.content-body blockquote p { margin: 0; }
+
+/* Screenshot slots (text placeholder) */
+.screenshot-slot {
+  margin: 12px 0;
+  padding: 14px 18px;
+  background: var(--bg-1);
+  border: 1px dashed var(--line);
+  border-radius: var(--r-3);
+  display: flex; gap: 14px; align-items: baseline;
+  font-size: 13px;
+}
+.screenshot-slot .ss-tag { color: var(--brand); font-weight: 500; letter-spacing: 0.04em; flex-shrink: 0; }
+.screenshot-slot .ss-text { color: var(--fg-3); font-style: italic; }
+
+/* Screenshot slots (with image) */
+figure.screenshot-slot.has-img {
+  display: block;
+  margin: 20px 0;
+  padding: 0;
+  background: var(--bg-1);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-3);
+  overflow: hidden;
+}
+figure.screenshot-slot.has-img .ss-cap {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  padding: 12px 16px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 12.5px;
+}
+figure.screenshot-slot.has-img .ss-cap .ss-tag {
+  color: var(--brand); font-weight: 500;
+  letter-spacing: 0.04em; flex-shrink: 0;
+}
+figure.screenshot-slot.has-img .ss-cap .ss-text {
+  color: var(--fg-2); font-style: normal;
+}
+figure.screenshot-slot.has-img img {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #fff;
+}
+
+/* Note callouts */
+.note-callout {
+  display: flex; gap: 16px;
+  padding: 14px 18px;
+  margin: 16px 0;
+  background: #fff8f3;
+  border-left: 3px solid var(--brand-coral);
+  border-radius: 0 var(--r-3) var(--r-3) 0;
+}
+.note-callout .nc-tag {
+  color: var(--brand-coral); font-size: 12px;
+  letter-spacing: 0.04em; flex-shrink: 0; padding-top: 2px;
+}
+.note-callout .nc-body { color: var(--fg-2); font-size: 14px; line-height: 1.6; }
+
+/* Aviso callouts (navigation hint — yellow, bold) */
+.aviso-callout {
+  display: flex; gap: 16px;
+  padding: 14px 18px;
+  margin: 24px 0 8px;
+  background: #fffbe6;
+  border-left: 3px solid #e6a800;
+  border-radius: 0 var(--r-3) var(--r-3) 0;
+}
+.aviso-callout .av-tag {
+  color: #b37f00; font-size: 12px;
+  letter-spacing: 0.04em; flex-shrink: 0; padding-top: 2px; font-weight: 500;
+}
+.aviso-callout .av-body { color: var(--fg); font-size: 14px; line-height: 1.6; font-weight: 600; }
+
+/* Warning callouts */
+.warning-callout {
+  display: flex; gap: 16px;
+  padding: 14px 18px;
+  margin: 16px 0;
+  background: #fff2f2;
+  border-left: 3px solid #d93025;
+  border-radius: 0 var(--r-3) var(--r-3) 0;
+}
+.warning-callout .wn-tag {
+  color: #d93025; font-size: 12px;
+  letter-spacing: 0.04em; flex-shrink: 0; padding-top: 2px; font-weight: 500;
+}
+.warning-callout .wn-body { color: var(--fg); font-size: 14px; line-height: 1.6; font-weight: 500; }
+
+/* Evidence callouts */
+.evidence-callout {
+  display: flex; gap: 16px;
+  padding: 14px 18px;
+  margin: 24px 0 8px;
+  background: #fffbe6;
+  border-left: 3px solid #e6a800;
+  border-radius: 0 var(--r-3) var(--r-3) 0;
+}
+.evidence-callout .ev-tag {
+  color: #b37f00; font-size: 12px;
+  letter-spacing: 0.04em; flex-shrink: 0; padding-top: 2px; font-weight: 500;
+}
+.evidence-callout .ev-body { color: var(--fg-2); font-size: 14px; line-height: 1.6; }
+
+/* Side TOC */
+.toc-side {
+  position: sticky;
+  top: 140px;
+  align-self: start;
+  font-size: 13px;
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.toc-side .toc-side-inner > .eyebrow { margin-bottom: 12px; }
+.toc-side ol, .toc-side ul { list-style: none; padding: 0; margin: 0; }
+.toc-side li { margin: 0; padding: 0; }
+.toc-side li::before { content: none; }
+.toc-side a {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 0 6px 12px;
+  margin-left: -12px;
+  border-left: 2px solid transparent;
+  color: var(--fg-3);
+  text-decoration: none;
+  line-height: 1.45;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.toc-side a:hover { color: var(--fg-2); }
+.toc-side a.active { color: var(--brand); border-left-color: var(--brand); }
+.toc-side .toc-h2 > a { font-weight: 500; color: var(--fg-2); }
+.toc-side .toc-h2 > a.active { color: var(--brand); }
+.toc-side .toc-h3 > a {
+  padding-left: 28px;
+  margin-left: -12px;
+  font-size: 12.5px;
+}
+.toc-side .toc-h4 > a {
+  padding-left: 44px;
+  margin-left: -12px;
+  font-size: 12px;
+  color: var(--fg-3);
+}
+.toc-side .toc-top {
+  display: inline-block;
+  margin-top: 20px;
+  font-size: 12px;
+  color: var(--fg-3);
+  text-decoration: none;
+  letter-spacing: 0.04em;
+}
+.toc-side .toc-top:hover { color: var(--brand); }
+
+/* Footer */
+.site-footer {
+  border-top: 1px solid var(--line-soft);
+  background: var(--bg-1);
+  padding: 48px 0 56px;
+  font-size: 13px;
+  color: var(--fg-3);
+}
+.site-footer .row {
+  display: flex; gap: 24px; flex-wrap: wrap;
+  justify-content: space-between; align-items: center;
+}
+.site-footer img { height: 22px; opacity: 0.85; }
+.site-footer .legal { display: flex; gap: 16px; flex-wrap: wrap; }
+.site-footer a { color: var(--fg-2); text-decoration: none; }
+.site-footer a:hover { color: var(--brand); }
+
+/* Page footer nav (prev/next) */
+.page-footer-nav {
+  margin-top: 80px;
+  padding-top: 32px;
+  border-top: 1px solid var(--line-soft);
+  display: flex; gap: 16px;
+  justify-content: space-between; flex-wrap: wrap;
+}
+.page-footer-nav a {
+  text-decoration: none;
+  color: var(--fg-2);
+  font-size: 13px;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 12px 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-3);
+  background: var(--bg-1);
+  min-width: 200px;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.page-footer-nav a:hover { border-color: var(--brand); color: var(--brand); }
+.page-footer-nav .pfn-k { font-size: 11px; color: var(--fg-3); letter-spacing: 0.04em; }
+.page-footer-nav .pfn-prev { text-align: left; }
+.page-footer-nav .pfn-next { text-align: right; margin-left: auto; }
+.page-footer-nav .pfn-next .pfn-k { text-align: right; }
+
+/* Categories table */
+.cat-heading {
+  font-size: clamp(18px, 2vw, 24px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 56px 0 14px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line-soft);
+  color: var(--fg);
+  scroll-margin-top: 130px;
+}
+.content-body > .cat-heading:first-of-type { margin-top: 0; border-top: 0; padding-top: 0; }
+.cat-filter-wrap {
+  margin-bottom: 32px;
+}
+.cat-filter {
+  width: 100%;
+  max-width: 420px;
+  padding: 10px 14px;
+  font-family: var(--mono);
+  font-size: 13px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r-3);
+  color: var(--fg);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.cat-filter:focus { border-color: var(--brand); }
+.cat-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.cat-table thead th {
+  text-align: left;
+  padding: 8px 14px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-soft);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  font-weight: 500;
+}
+.cat-table tbody tr { transition: background 0.1s; }
+.cat-table tbody tr:hover { background: var(--bg-2); }
+.cat-table td {
+  padding: 9px 14px;
+  border: 1px solid var(--line-soft);
+  vertical-align: top;
+  line-height: 1.55;
+}
+.cat-sub {
+  width: 220px;
+  font-weight: 500;
+  color: var(--fg);
+  white-space: nowrap;
+}
+.cat-examples { color: var(--fg-3); }
+.cat-hidden { display: none; }
+
+/* Generic content tables (e.g. Problemas Comuns) */
+.content-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin: 24px 0 32px;
+  border-radius: var(--r-3);
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+}
+.content-body table thead th {
+  text-align: left;
+  padding: 12px 18px;
+  background: var(--fg);
+  color: var(--bg-1);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  border-bottom: 2px solid var(--brand);
+}
+.content-body table tbody tr:nth-child(odd) {
+  background: var(--bg-1);
+}
+.content-body table tbody tr:nth-child(even) {
+  background: var(--bg-2);
+}
+.content-body table tbody tr:hover {
+  background: #dde1ea;
+}
+.content-body table td {
+  padding: 14px 18px;
+  vertical-align: top;
+  line-height: 1.65;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--fg);
+}
+.content-body table td:first-child {
+  font-weight: 600;
+  color: var(--brand-2);
+  white-space: nowrap;
+  width: 28%;
+}
+.content-body table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+@media (max-width: 1024px) {
+  .content-grid { grid-template-columns: 1fr; gap: 0; }
+  .toc-side { display: none; }
+  .page-nav { top: 64px; }
+  .content-body h2, .content-body h3 { scroll-margin-top: 130px; }
+}
+@media (max-width: 640px) {
+  body { font-size: 14px; }
+  .shell, .shell-wide { width: min(640px, 100% - 32px); }
+  .cover h1 { font-size: 30px; }
+  .content-body h2 { font-size: 21px; margin-top: 48px; }
+  .content-body h3 { font-size: 16px; }
+  .page-nav a { padding: 12px 16px; }
+}
+@media print {
+  .site-header, .page-nav, .site-footer, .toc-side, .page-footer-nav { display: none; }
+  .content-grid { grid-template-columns: 1fr; }
+  body { background: white; }
+  .content-body pre { background: #f3f4f8; color: #14182a; border-color: var(--line-soft); }
+  .content-body pre::before { background: #f3f4f8; color: var(--brand-2); }
+  .content-body pre code { color: #14182a; }
+}
+</style>
+</head>
+<body>
+<header class="site-header">
+  <div class="shell-wide row">
+    <a href="https://novosite.baselabs.com.br/" aria-label="BASE/labs">
+      <img src="https://novosite.baselabs.com.br/logo-azul.webp" alt="BASE/labs">
+    </a>
+    <div class="crumbs">
+      <a href="https://novosite.baselabs.com.br/">base/labs</a>
+      &nbsp;/&nbsp; beclean
+      &nbsp;/&nbsp; instruções workers
+    </div>
+  </div>
+</header>
+<nav class="page-nav" aria-label="Páginas do manual">
+  <div class="shell-wide">
+    <ul>
+      <li><a href="/beclean/instrucoes_workers/" class="active">Início</a></li>
+      <li><a href="/beclean/instrucoes_workers/regras/" class="">Regras</a></li>
+      <li><a href="/beclean/instrucoes_workers/tarefa-1/" class="">Tarefa 1</a></li>
+      <li><a href="/beclean/instrucoes_workers/categorias/" class="">Categorias</a></li>
+      <li><a href="/beclean/instrucoes_workers/problemas/" class="">FAQ</a></li>
+    </ul>
+  </div>
+</nav>
+<section class="cover">
+  <div class="shell-wide">
+    <div class="eyebrow"><span class="bar"></span>manual operacional · beclean</div>
+    <h1>Tarefas para <em>Workers</em>.<br>Projeto BeClean.</h1>
+    
+    <div class="meta">
+      <div>
+        <div class="k">// gestor de contrato</div>
+        <div class="v">Hugo Barros · <a href="mailto:hbarros@baselabs.com.br">hbarros@baselabs.com.br</a></div>
+      </div>
+      <div>
+        <div class="k">// pontos focais</div>
+        <div class="v">Marina da Costa Miranda · Elaine da Silva (BeClean)</div>
+      </div>
+      <div>
+        <div class="k">// versão</div>
+        <div class="v">1.5 — 11/05/2026</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+<main class="content">
+  <div class="shell-wide content-grid">
+    <article class="content-body">
+<h2 id="publico">Público deste documento</h2>
+<p>Este documento é a <strong>referência oficial dos workers BASE/labs
+alocados ao projeto BeClean</strong> — profissionais contratados pela
+BASE/labs para executar a validação dos produtos no Hub da BeClean.</p>
+<p><strong>Quem deve ler:</strong> todos os workers, antes e durante a
+execução das tarefas. Antes do primeiro dia, leia o documento por
+completo. Durante a operação, mantenha-o aberto como apoio — aqui estão
+os passos detalhados, as evidências esperadas, as regras de execução e o
+canal de dúvidas.</p>
+<p>O <strong>gestor de contratos da BASE/labs</strong> é o ponto de
+contato principal e responde dúvidas via WhatsApp (ver "Canal de
+dúvidas").</p>
+<h2 id="sec-introducao">1. Introdução</h2>
+<p>A BeClean é uma empresa que mantém uma base curada de produtos
+cosméticos e de higiene pessoal, com foco em análise de ingredientes e
+classificação por categoria. Para alimentar e manter essa base, a
+BeClean opera o <strong>Hub</strong> — uma plataforma interna onde
+produtos chegam por três caminhos principais: scraping de sites de
+lojas, enriquecimento por bases de cosméticos públicas e privadas e
+coleta de campo em farmácias.</p>
+<p>A BASE/labs foi contratada para executar a <strong>validação de
+scraping (Pré-Aprovados)</strong> — conferência de produtos importados
+via web scraping, garantindo que imagem, nome, EAN, categoria e lista de
+ingredientes estejam corretos antes da aprovação para produção.</p>
+<p>Este documento detalha o passo a passo dessa tarefa, a estrutura de
+entrega das evidências no Google Drive, a planilha de controle, o canal
+de dúvidas e as regras gerais de execução.</p>
+<h2 id="sec-duvidas">2. Canal de dúvidas — Grupo de WhatsApp</h2>
+<p>Para suporte em tempo real durante a execução das tarefas, todos os
+workers alocados ao projeto serão incluídos em um <strong>grupo de
+WhatsApp</strong> dedicado.</p>
+<h3 id="moderadores-e-pontos-focais">2.1. Moderadores e pontos
+focais</h3>
+<ul>
+<li><strong>Gestor de contratos (BASE/labs)</strong> — ponto de contato
+principal para o worker, intermediário com a BeClean e responsável
+administrativo do projeto</li>
+<li><strong>Ponto focal técnico (BeClean)</strong> — dúvidas sobre
+produtos, categorias e regras de negócio</li>
+<li><strong>Ponto focal operacional (BeClean)</strong> — dúvidas sobre o
+Hub e o fluxo de validação</li>
+</ul>
+<h3 id="horário-de-atendimento">2.2. Horário de atendimento</h3>
+<p>O grupo cobre <strong>toda a jornada de trabalho do worker</strong>.
+Como os workers podem ter rotinas diferentes, dúvidas podem ser enviadas
+a qualquer momento — a equipe de moderação responderá assim que possível
+dentro do horário de cada moderador. Para máxima agilidade, evitar
+acumular dúvidas: enviar à medida que aparecerem.</p>
+<h3 id="boas-práticas-no-grupo">2.3. Boas práticas no grupo</h3>
+<ul>
+<li><strong>Identifique a tarefa</strong> ao enviar uma dúvida: começar
+com "[Scraping]"</li>
+<li><strong>Anexe screenshot</strong> sempre que possível — facilita o
+diagnóstico</li>
+<li><strong>Informe o produto/EAN/marca</strong> em questão</li>
+<li><strong>Antes de perguntar, consulte este documento</strong> —
+muitas dúvidas estão respondidas aqui</li>
+<li><strong>Não compartilhe</strong> informações do grupo, prints do Hub
+ou dados de produtos fora dele</li>
+<li><strong>Dúvidas conceituais recorrentes</strong> (categoria de um
+produto, padrão de nomenclatura, etc.) podem virar atualizações deste
+documento — vale a pena registrar</li>
+</ul>
+<h3 id="quando-não-usar-o-grupo">2.4. Quando NÃO usar o grupo</h3>
+<ul>
+<li>Anomalias que não bloqueiam o trabalho do dia → anotar na coluna
+"Observações" da planilha de controle</li>
+<li>Comentários gerais ou sociais → o grupo é estritamente
+operacional</li>
+<li>Assuntos contratuais ou administrativos → tratar diretamente com o
+gestor de contratos da BASE/labs, fora do grupo</li>
+</ul>
+<div class="page-footer-nav"><span></span><a href="/beclean/instrucoes_workers/regras/" class="pfn-next"><span class="pfn-k">próxima →</span><span class="pfn-v">Regras</span></a></div>
+    </article>
+    <aside class="toc-side" aria-label="Sumário lateral">
+      <div class="toc-side-inner">
+        <div class="eyebrow"><span class="bar"></span>nesta página</div>
+        <ol class="toc-list">
+        <li class="toc-h2"><a href="#publico"><span class="t">Público deste documento</span></a></li>
+        <li class="toc-h2"><a href="#sec-introducao"><span class="t">1. Introdução</span></a></li>
+        <li class="toc-h2"><a href="#sec-duvidas"><span class="t">2. Canal de dúvidas — Grupo de WhatsApp</span></a></li>
+        <li class="toc-h3"><a href="#moderadores-e-pontos-focais"><span class="t">2.1. Moderadores e pontos
+focais</span></a></li>
+        <li class="toc-h3"><a href="#horário-de-atendimento"><span class="t">2.2. Horário de atendimento</span></a></li>
+        <li class="toc-h3"><a href="#boas-práticas-no-grupo"><span class="t">2.3. Boas práticas no grupo</span></a></li>
+        <li class="toc-h3"><a href="#quando-não-usar-o-grupo"><span class="t">2.4. Quando NÃO usar o grupo</span></a></li>
+        </ol>
+        <a href="#" class="toc-top" aria-label="Voltar ao topo">↑ topo</a>
+      </div>
+    </aside>
+  </div>
+</main>
+<footer class="site-footer">
+  <div class="shell-wide row">
+    <a href="https://novosite.baselabs.com.br/" aria-label="BASE/labs">
+      <img src="https://novosite.baselabs.com.br/logo-azul.webp" alt="BASE/labs">
+    </a>
+    <div class="legal">
+      <span>© 2026 BASE/labs · Braço de IA da BASE2</span>
+      <a href="mailto:hbarros@baselabs.com.br">Dúvidas: hbarros@baselabs.com.br</a>
+    </div>
+  </div>
+</footer>
+<script>
+// Category filter
+(() => {
+  const input = document.querySelector('.cat-filter');
+  if (!input) return;
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    document.querySelectorAll('.cat-heading').forEach(h2 => {
+      const table = h2.nextElementSibling;
+      if (!table) return;
+      const catMatch = !q || h2.textContent.toLowerCase().includes(q);
+      let visibleRows = 0;
+      table.querySelectorAll('tbody tr').forEach(tr => {
+        const match = catMatch || tr.textContent.toLowerCase().includes(q);
+        tr.classList.toggle('cat-hidden', !match);
+        if (match) visibleRows++;
+      });
+      const hide = q && !catMatch && visibleRows === 0;
+      h2.classList.toggle('cat-hidden', hide);
+      table.classList.toggle('cat-hidden', hide);
+    });
+  });
+})();
+
+(() => {
+  const headings = document.querySelectorAll('.content-body h2[id], .content-body h3[id], .content-body h4[id]');
+  const links = document.querySelectorAll('.toc-side a[href^="#"]');
+  if (!headings.length || !links.length) return;
+  const linkByHref = {};
+  links.forEach(a => { linkByHref[a.getAttribute('href')] = a; });
+  let activeId = null;
+  const setActive = (id) => {
+    if (id === activeId) return;
+    activeId = id;
+    links.forEach(a => a.classList.remove('active'));
+    const link = linkByHref['#' + id];
+    if (link) link.classList.add('active');
+  };
+  const visible = new Map();
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) visible.set(e.target.id, e.target);
+      else visible.delete(e.target.id);
+    });
+    const ids = [...visible.values()].sort((a,b) => a.offsetTop - b.offsetTop).map(el => el.id);
+    if (ids.length) setActive(ids[0]);
+  }, { rootMargin: '-130px 0px -70% 0px' });
+  headings.forEach(h => io.observe(h));
+})();
+</script>
+</body>
+</html>
