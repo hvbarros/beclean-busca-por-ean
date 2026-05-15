@@ -6,3 +6,6 @@ chrome.log
 mintel.db
 mintel.xlsx
 imagens/
+.DS_Store
+.wrangler/
+evidencias/
