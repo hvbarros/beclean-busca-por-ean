@@ -218,7 +218,7 @@ Use esta lista como referência rápida durante a execução. Cada item correspo
 
 Abrir o link da loja e usá-lo como referência principal para toda a conferência dos passos seguintes.
 
-Caso o link **não exista, não abra ou abra em uma página sem produto**, pular direto para o **Passo 2.5 — Envio para Revisão** e usar o motivo **"SITE"**.
+Caso o link **não exista, não abra ou abra em uma página sem produto**, ainda assim **valide o EAN** (Passo 2.4.c) antes de encerrar a conferência do produto. Após validar o EAN, pular para o **Passo 2.5 — Envio para Revisão** e usar o motivo **"SITE"**.
 
 > *[ESPAÇO PARA SCREENSHOT 3.a: link da loja aberto + ficha do produto no Hub lado a lado]*
 
@@ -325,6 +325,12 @@ Lista C (Vinculados / DB — Hub):
 > *[ESPAÇO PARA SCREENSHOT 4.e.1: três quadrantes (Lista A, B e C) destacando o botão "copiar" de cada um]*
 
 > **Evidência:** screenshot dos três quadrantes de ingredientes e screenshot da conclusão da IA.
+
+> ⚠️ **Atenção — Perfume com fórmula aberta:** se o ingrediente "perfume" aparecer com sua composição detalhada (indicada por asteriscos, parênteses ou subitens com os componentes), **retire o "perfume" da lista** e considere apenas os componentes abertos individualmente. Envie o produto para revisão para que o ajuste seja feito no Hub.
+
+> ⚠️ **Atenção — "Pode conter" e "Não contém":** ignore menções de "pode conter" (referentes a alérgenos) e "não contém" (marketing de ingrediente livre) ao comparar as listas. Se qualquer uma das listas do Hub incluir esses termos como ingredientes, envie o produto para revisão para que sejam removidos da composição.
+
+> ℹ️ **Diferenças de idioma (português vs. INCI):** diferenças entre nomes em português e o padrão internacional INCI são tratadas automaticamente pelo sistema e **não devem ser consideradas divergência**. Ao usar a IA, oriente-a a focar na **equivalência química das substâncias**, não na grafia dos nomes.
 
 > **Aviso:** conferir **todos** os itens a–e antes de qualquer ação. Se um ou mais critérios falharem, registrar todos os problemas encontrados na Observação e ir para o **Passo 2.6 — Envio para Revisão**. Nunca interromper a conferência no meio porque um item falhou.
 
