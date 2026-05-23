@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Distribuição de EANs · BeClean · BASE/labs</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500;1,600&display=swap">
+<link rel="icon" href="https://propostas.baselabs.com.br/beclean/favicon-32.webp" sizes="32x32" type="image/webp">
+<style>
+:root {
+  --bg: #f6f7f9; --bg-1: #ffffff; --bg-2: #eef0f4;
+  --fg: #14182a; --fg-2: #404862; --fg-3: #6a7488;
+  --brand: #3654ae; --line: #acb8ca; --line-soft: #d1d7e0;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --r-3: 8px;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--mono); font-size: 15px; line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+.shell-wide { width: min(1200px, 100% - 48px); margin-inline: auto; }
+
+.site-header {
+  position: sticky; top: 0; z-index: 80;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: saturate(140%) blur(8px);
+  border-bottom: 1px solid var(--line-soft);
+}
+.site-header .row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; height: 64px;
+}
+.site-header img { height: 28px; }
+.site-header .crumbs { font-size: 12px; color: var(--fg-3); letter-spacing: 0.04em; }
+.site-header .crumbs a { color: var(--fg-2); text-decoration: none; }
+.site-header .crumbs a:hover { color: var(--brand); }
+
+.cover {
+  padding: clamp(48px,8vw,80px) 0 clamp(28px,5vw,48px);
+  border-bottom: 1px solid var(--line-soft); background: var(--bg-1);
+}
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--fg-3); letter-spacing: 0.04em;
+  text-transform: lowercase; margin-bottom: 20px;
+}
+.eyebrow .bar { width: 24px; height: 2px; background: var(--brand); display: inline-block; }
+.cover h1 {
+  font-size: clamp(28px,4.5vw,52px); font-weight: 700;
+  line-height: 1.05; letter-spacing: -0.03em; margin: 0 0 20px;
+}
+.cover h1 em { font-style: italic; font-weight: 400; color: var(--brand); }
+.cover .meta { margin-top: 28px; display: flex; gap: 32px; flex-wrap: wrap; font-size: 13px; }
+.cover .meta .k { color: var(--fg-3); letter-spacing: 0.04em; }
+.cover .meta .v { color: var(--fg); margin-top: 4px; font-weight: 600; }
+
+.content { padding: clamp(40px,6vw,72px) 0 clamp(56px,8vw,100px); }
+.section-title {
+  font-size: clamp(18px,2.2vw,24px); font-weight: 600;
+  letter-spacing: -0.02em; margin: 0 0 8px;
+  display: flex; align-items: center; gap: 10px;
+}
+.section-title::before { content: "//"; color: var(--brand); font-weight: 400; }
+.section-desc { font-size: 13px; color: var(--fg-3); margin: 0 0 24px; }
+
+.table-wrap { overflow-x: auto; }
+.dist-table {
+  width: 100%; border-collapse: collapse; font-size: 13.5px;
+  border: 1px solid var(--line-soft); border-radius: var(--r-3);
+  overflow: hidden; min-width: 560px;
+}
+.dist-table thead th {
+  text-align: left; padding: 12px 16px;
+  background: var(--fg); color: var(--bg-1);
+  font-size: 11px; letter-spacing: 0.06em;
+  text-transform: uppercase; font-weight: 600;
+  border-right: 1px solid rgba(255,255,255,0.08);
+  white-space: nowrap;
+}
+.dist-table thead th:last-child { border-right: 0; }
+.dist-table tbody td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line-soft);
+  border-right: 1px solid var(--line-soft);
+  vertical-align: middle;
+}
+.dist-table tbody td:last-child { border-right: 0; }
+.dist-table tbody tr:last-child td { border-bottom: 0; }
+
+.row-worker td { border-top: 2px solid var(--line); }
+.row-worker:first-child td { border-top: none; }
+.row-sem-atrib td { color: var(--fg-3); font-style: italic; border-top: 2px solid var(--line); }
+.row-subtotal td {
+  background: var(--bg-2);
+  border-top: 1px dashed var(--line);
+  border-bottom: 2px solid var(--line);
+}
+
+.col-worker { font-weight: 600; color: var(--fg); min-width: 200px; vertical-align: top; padding-top: 13px; }
+.col-tipo   { width: 90px; }
+.col-qtd    { width: 140px; text-align: right; font-variant-numeric: tabular-nums; }
+.col-total  { font-weight: 600; color: var(--fg); }
+.col-marca  { color: var(--fg-2); }
+
+.badge-tipo {
+  display: inline-block; padding: 2px 9px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em;
+}
+.badge-ean   { background: #dbeafe; color: #1e40af; }
+.badge-marca { background: #fce7f3; color: #9d174d; }
+.badge-nd    { background: var(--bg-2); color: var(--fg-3); }
+
+.site-footer {
+  border-top: 1px solid var(--line-soft); background: var(--bg-1);
+  padding: 40px 0 48px; font-size: 13px; color: var(--fg-3);
+}
+.site-footer .row {
+  display: flex; gap: 24px; flex-wrap: wrap;
+  justify-content: space-between; align-items: center;
+}
+.site-footer img { height: 22px; opacity: 0.85; }
+.site-footer a { color: var(--fg-2); text-decoration: none; }
+.site-footer a:hover { color: var(--brand); }
+
+@media (max-width: 640px) {
+  body { font-size: 14px; }
+  .shell-wide { width: min(640px, 100% - 32px); }
+  .cover h1 { font-size: 26px; }
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="shell-wide row">
+    <a href="https://baselabs.com.br/" aria-label="BASE/labs">
+      <img src="https://propostas.baselabs.com.br/beclean/logo-azul.webp" alt="BASE/labs">
+    </a>
+    <div class="crumbs">
+      <a href="https://baselabs.com.br/">base/labs</a>
+      &nbsp;/&nbsp; beclean &nbsp;/&nbsp; distribuição workers
+    </div>
+  </div>
+</header>
+
+<section class="cover">
+  <div class="shell-wide">
+    <div class="eyebrow"><span class="bar"></span>uso interno · base/labs</div>
+    <h1>Distribuição de<br><em>EANs e Marcas</em></h1>
+    <div class="meta">
+      <div><div class="k">referência</div><div class="v">20 de maio de 2026 (redistribuição parcial)</div></div>
+      <div><div class="k">workers</div><div class="v">17</div></div>
+      <div><div class="k">EANs distribuídos</div><div class="v">2.909</div></div>
+      <div><div class="k">marcas distribuídas (qtd)</div><div class="v">7.513</div></div>
+    </div>
+  </div>
+</section>
+
+<main class="content">
+  <div class="shell-wide">
+    <h2 class="section-title">Distribuição por worker</h2>
+    <p class="section-desc">
+      <strong>EAN</strong> — total de EANs críticos atribuídos (fonte: planilha).
+      &nbsp;·&nbsp;
+      <strong>Marca</strong> — marca inteira atribuída com volume esperado (fonte: PDF).
+    </p>
+    <div class="table-wrap">
+      <table class="dist-table">
+        <thead>
+          <tr>
+            <th>Worker</th>
+            <th>EAN ou Marca</th>
+            <th style="text-align:right">Qtd. Esperada</th>
+            <th>Marca</th>
+          </tr>
+        </thead>
+        <tbody>
+
+  <tr class="row-worker">
+    <td class="col-worker" rowspan="4">Ana Paula Soares Oliveira</td>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">266</td>
+    <td class="col-marca">Mari Maria Makeup</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">266</td>
+    <td class="col-marca">Mari Maria</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">129</td>
+    <td class="col-marca">OPI</td>
+  </tr>
+  <tr class="row-subtotal">
+    <td class="col-tipo"></td>
+    <td class="col-qtd col-total">Total: 661</td>
+    <td class="col-marca"></td>
+  </tr>
+  <tr class="row-worker">
+    <td class="col-worker" rowspan="2">Breno Souza</td>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">530</td>
+    <td class="col-marca">Revlon</td>
+  </tr>
+  <tr class="row-subtotal">
+    <td class="col-tipo"></td>
+    <td class="col-qtd col-total">Total: 530</td>
+    <td class="col-marca"></td>
+  </tr>
+  <tr class="row-worker">
+    <td class="col-worker" rowspan="2">Bruno Felipe Corte</td>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">1059</td>
+    <td class="col-marca">Boticário</td>
+  </tr>
+  <tr class="row-subtotal">
+    <td class="col-tipo"></td>
+    <td class="col-qtd col-total">Total: 1.059</td>
+    <td class="col-marca"></td>
+  </tr>
+  <tr class="row-worker">
+    <td class="col-worker">Camila Teixeira Ferreira</td>
+    <td class="col-tipo"><span class="badge-tipo badge-ean">EAN</span></td>
+    <td class="col-qtd">582</td>
+    <td class="col-marca">—</td>
+  </tr>
+  <tr class="row-worker">
+    <td class="col-worker" rowspan="2">Darlan Leal Santos</td>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">1431</td>
+    <td class="col-marca">Sephora</td>
+  </tr>
+  <tr class="row-subtotal">
+    <td class="col-tipo"></td>
+    <td class="col-qtd col-total">Total: 1.431</td>
+    <td class="col-marca"></td>
+  </tr>
+  <tr class="row-worker">
+    <td class="col-worker" rowspan="2">Eduardo Faria</td>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">306</td>
+    <td class="col-marca">Embelleze</td>
+  </tr>
+  <tr class="row-subtotal">
+    <td class="col-tipo"></td>
+    <td class="col-qtd col-total">Total: 306</td>
+    <td class="col-marca"></td>
+  </tr>
+  <tr class="row-worker">
+    <td class="col-worker" rowspan="4">Eliseu Ferreira</td>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">167</td>
+    <td class="col-marca">Kiss New York</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">164</td>
+    <td class="col-marca">Felps</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">130</td>
+    <td class="col-marca">Shiseido</td>
+  </tr>
+  <tr class="row-subtotal">
+    <td class="col-tipo"></td>
+    <td class="col-qtd col-total">Total: 461</td>
+    <td class="col-marca"></td>
+  </tr>
+  <tr class="row-worker">
+    <td class="col-worker" rowspan="2">Geilson Soares</td>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">346</td>
+    <td class="col-marca">Vult</td>
+  </tr>
+  <tr class="row-subtotal">
+    <td class="col-tipo"></td>
+    <td class="col-qtd col-total">Total: 346</td>
+    <td class="col-marca"></td>
+  </tr>
+  <tr class="row-worker">
+    <td class="col-worker" rowspan="2">Gustavo Norberto</td>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">304</td>
+    <td class="col-marca">Nivea</td>
+  </tr>
+  <tr class="row-subtotal">
+    <td class="col-tipo"></td>
+    <td class="col-qtd col-total">Total: 304</td>
+    <td class="col-marca"></td>
+  </tr>
+  <tr class="row-worker">
+    <td class="col-worker" rowspan="2">Lorrane Fernandes</td>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">634</td>
+    <td class="col-marca">Eudora</td>
+  </tr>
+  <tr class="row-subtotal">
+    <td class="col-tipo"></td>
+    <td class="col-qtd col-total">Total: 634</td>
+    <td class="col-marca"></td>
+  </tr>
+  <tr class="row-worker">
+    <td class="col-worker" rowspan="4">Márcia Tolentino</td>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">116</td>
+    <td class="col-marca">Adcos</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">103</td>
+    <td class="col-marca">Dior</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">102</td>
+    <td class="col-marca">Demarge</td>
+  </tr>
+  <tr class="row-subtotal">
+    <td class="col-tipo"></td>
+    <td class="col-qtd col-total">Total: 321</td>
+    <td class="col-marca"></td>
+  </tr>
+  <tr class="row-worker">
+    <td class="col-worker">Maria Geane Silva Cardoso</td>
+    <td class="col-tipo"><span class="badge-tipo badge-ean">EAN</span></td>
+    <td class="col-qtd">581</td>
+    <td class="col-marca">—</td>
+  </tr>
+  <tr class="row-worker">
+    <td class="col-worker">Nicolle Dognini</td>
+    <td class="col-tipo"><span class="badge-tipo badge-ean">EAN</span></td>
+    <td class="col-qtd">582</td>
+    <td class="col-marca">—</td>
+  </tr>
+  <tr class="row-worker">
+    <td class="col-worker">Paula Machado Alves</td>
+    <td class="col-tipo"><span class="badge-tipo badge-ean">EAN</span></td>
+    <td class="col-qtd">582</td>
+    <td class="col-marca">—</td>
+  </tr>
+  <tr class="row-worker">
+    <td class="col-worker" rowspan="24">Paulo Santini</td>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">132</td>
+    <td class="col-marca">Lola Cosmetics</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">85</td>
+    <td class="col-marca">Mahogani</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">81</td>
+    <td class="col-marca">Vizzela</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">74</td>
+    <td class="col-marca">Pink Cheeks</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">71</td>
+    <td class="col-marca">Fenty Beauty</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">52</td>
+    <td class="col-marca">Organic Shop</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">52</td>
+    <td class="col-marca">La Roche Posay</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">45</td>
+    <td class="col-marca">Nars</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">41</td>
+    <td class="col-marca">Sallve</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">36</td>
+    <td class="col-marca">Sobre Barba</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">32</td>
+    <td class="col-marca">Maybelline</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">27</td>
+    <td class="col-marca">Francine</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">26</td>
+    <td class="col-marca">Giovanna Baby</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">22</td>
+    <td class="col-marca">Neutrogena</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">11</td>
+    <td class="col-marca">Skelt</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">9</td>
+    <td class="col-marca">Lux</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">6</td>
+    <td class="col-marca">Contem 1g</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">6</td>
+    <td class="col-marca">Dermacyd</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">3</td>
+    <td class="col-marca">Johnsons Baby</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">2</td>
+    <td class="col-marca">Pantene</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">2</td>
+    <td class="col-marca">Briogeo</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">1</td>
+    <td class="col-marca">Glow Recipe</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">1</td>
+    <td class="col-marca">Bioderma</td>
+  </tr>
+  <tr class="row-subtotal">
+    <td class="col-tipo"></td>
+    <td class="col-qtd col-total">Total: 817</td>
+    <td class="col-marca"></td>
+  </tr>
+  <tr class="row-worker">
+    <td class="col-worker">Rayana Araujo Silva</td>
+    <td class="col-tipo"><span class="badge-tipo badge-ean">EAN</span></td>
+    <td class="col-qtd">582</td>
+    <td class="col-marca">—</td>
+  </tr>
+  <tr class="row-worker">
+    <td class="col-worker" rowspan="4">Sherle Daniele</td>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">291</td>
+    <td class="col-marca">Granado</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">268</td>
+    <td class="col-marca">Quem Disse Berenice</td>
+  </tr>
+  <tr>
+    <td class="col-tipo"><span class="badge-tipo badge-marca">Marca</span></td>
+    <td class="col-qtd">84</td>
+    <td class="col-marca">Phebo</td>
+  </tr>
+  <tr class="row-subtotal">
+    <td class="col-tipo"></td>
+    <td class="col-qtd col-total">Total: 643</td>
+    <td class="col-marca"></td>
+  </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="shell-wide row">
+    <a href="https://baselabs.com.br/" aria-label="BASE/labs">
+      <img src="https://propostas.baselabs.com.br/beclean/logo-azul.webp" alt="BASE/labs">
+    </a>
+    <div>
+      <span>© 2026 BASE/labs · uso interno</span>
+      &nbsp;·&nbsp;
+      <a href="mailto:hbarros@baselabs.com.br">hbarros@baselabs.com.br</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

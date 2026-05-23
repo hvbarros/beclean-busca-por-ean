@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500;1,600&display=swap">
-<link rel="icon" href="https://novosite.baselabs.com.br/favicon-32.webp" sizes="32x32" type="image/webp">
+<link rel="icon" href="https://propostas.baselabs.com.br/beclean/favicon-32.webp" sizes="32x32" type="image/webp">
 <style>
 :root {
   --bg: #f6f7f9;
@@ -564,11 +564,11 @@ figure.screenshot-slot.has-img img {
 <body>
 <header class="site-header">
   <div class="shell-wide row">
-    <a href="https://novosite.baselabs.com.br/" aria-label="BASE/labs">
-      <img src="https://novosite.baselabs.com.br/logo-azul.webp" alt="BASE/labs">
+    <a href="https://baselabs.com.br/" aria-label="BASE/labs">
+      <img src="https://propostas.baselabs.com.br/beclean/logo-azul.webp" alt="BASE/labs">
     </a>
     <div class="crumbs">
-      <a href="https://novosite.baselabs.com.br/">base/labs</a>
+      <a href="https://baselabs.com.br/">base/labs</a>
       &nbsp;/&nbsp; beclean
       &nbsp;/&nbsp; instruções workers
     </div>
@@ -605,7 +605,9 @@ marca. As marcas atribuídas são enviadas pelo gestor de contratos via
 WhatsApp ou e-mail — podendo receber uma ou mais marcas de uma vez. Ao
 concluir, avisar o gestor para receber o próximo lote</li>
 <li><strong>Evidências obrigatórias:</strong> screenshots de todas as
-telas conferidas, salvos na pasta do EAN correspondente, no Drive</li>
+telas conferidas, salvos na pasta do EAN correspondente, no Drive. Como
+alternativa, é aceito um único arquivo de gravação de tela (vídeo) por
+EAN, salvo na pasta do EAN correspondente</li>
 <li><strong>Comunicação:</strong> dúvidas pontuais vão para o grupo de
 WhatsApp (ver "Canal de dúvidas"); dúvidas conceituais sobre
 produtos/categorias podem ser anotadas na coluna "Observações" da
@@ -620,6 +622,12 @@ Recorte (<code>Win + Shift + S</code>), o Snipping Tool, o atalho
 <code>Print Screen</code> ou o <a
 href="https://getgreenshot.org/">Greenshot</a> (gratuito, recomendado).
 Salve sempre no formato <code>.png</code>.</li>
+<li><strong>Gravação de tela (alternativa aos screenshots):</strong> se
+preferir gravar a tela em vez de tirar screenshots, use o Xbox Game Bar
+(<code>Win + G</code>) ou o OBS Studio (gratuito). Salve um arquivo de
+vídeo por EAN (<code>[EAN].mp4</code>) diretamente na pasta do EAN —
+<strong>não</strong> dentro de <code>screenshots</code>. Use screenshots
+<strong>ou</strong> vídeo para cada EAN, não os dois.</li>
 </ul>
 <div class="warning-callout"><span class="wn-tag">// atenção</span><div class="wn-body">O trabalho deve ser feito em um
 <strong>notebook ou desktop</strong>. Não é possível executar as tarefas
@@ -637,10 +645,18 @@ e-mail)</li>
 <li>Dentro de <code>evidencias</code>, criar a pasta da marca (se ainda
 não existir)</li>
 <li>Abrir a planilha de controle e registrar o horário de início</li>
-<li>Aplicar os filtros no Hub conforme o Passo 2.2</li>
-<li>Tirar o screenshot inicial dos filtros aplicados</li>
+<li>Aplicar os filtros no Hub conforme o Passo 2</li>
+<li>Registrar a evidência inicial dos filtros aplicados (screenshot ou
+início da gravação de tela)</li>
 <li>Iniciar a validação do primeiro produto</li>
 </ol>
+<blockquote>
+<p><strong>Evidências por EAN:</strong> para cada produto, a evidência
+pode ser feita em <strong>screenshots</strong> (salvo na subpasta
+<code>screenshots</code> do EAN) <strong>ou</strong> em
+<strong>vídeo</strong> (arquivo <code>[EAN].mp4</code> na pasta do EAN)
+— escolha um formato por EAN, não os dois.</p>
+</blockquote>
 <h2 id="sec-drive">2. Organização no Google Drive (pasta por
 worker)</h2>
 <h3 id="estrutura">2.1. Estrutura</h3>
@@ -655,8 +671,14 @@ antes do início dos trabalhos. A estrutura padrão é:</p>
             └── 📁 evidencias
                 └── 📁 [Marca]
                     └── 📁 [EAN]
-                        ├── 📁 screenshots
-                        └── 📄 observações.txt (opcional)</code></pre>
+                        ├── 📁 screenshots          ← opção A: pasta com screenshots
+                        │   └── 📄 passo3-01.png    (ou outros nomes ordenáveis)
+                        ├── 📄 observações.txt (opcional)
+                        └── 🎥 [EAN].mp4            ← opção B: vídeo direto na pasta do EAN</code></pre>
+<blockquote>
+<p><strong>Screenshots ou vídeo — escolha um por EAN.</strong> Não é
+necessário (nem esperado) ter os dois para o mesmo produto.</p>
+</blockquote>
 <h3 id="regras-de-nomenclatura">2.2. Regras de nomenclatura</h3>
 <ul>
 <li><strong>Pasta do worker:</strong>
@@ -666,11 +688,29 @@ antes do início dos trabalhos. A estrutura padrão é:</p>
 Hub. Ex.: <code>Natura</code></li>
 <li><strong>Pasta de EAN:</strong> o código EAN do produto. Ex.:
 <code>7891234567890</code></li>
-<li><strong>Screenshot:</strong> <code>[Passo]-[NN].png</code>. Ex.:
-<code>passo3-01.png</code></li>
+<li><strong>Screenshot:</strong> qualquer nome que permita ordenação é
+aceito. Formatos válidos:
+<ul>
+<li><code>[Passo]-[NN].png</code> — Ex.: <code>passo3-01.png</code>
+<em>(padrão recomendado)</em></li>
+<li><code>[NN].png</code> — Ex.: <code>01.png</code>,
+<code>02.png</code></li>
+<li>Qualquer nome com prefixo numérico ou de data que garanta ordem
+alfabética correta — Ex.: <code>2026-05-22_01.png</code></li>
+<li>Também é aceito confiar na <strong>data de modificação do
+arquivo</strong> para ordenação, desde que ela reflita a ordem real de
+captura (o que ocorre naturalmente ao tirar screenshots em
+sequência)</li>
 <li>Não usar acentos, espaços no início/fim do nome, nem caracteres
-especiais (<code>/ \ : * ? " &lt; &gt; |</code>) nos nomes de
-arquivo</li>
+especiais (<code>/ \ : * ? " &lt; &gt; |</code>) em nenhum nome de
+arquivo ou pasta</li>
+</ul></li>
+<li><strong>Gravação de tela (alternativa exclusiva aos
+screenshots):</strong> <code>[EAN].mp4</code> — o nome do arquivo deve
+ser o código EAN do produto. Ex.: <code>7891234567890.mp4</code>. Salvo
+<strong>diretamente na pasta <code>[EAN]</code></strong>, não dentro de
+<code>screenshots</code>. Use screenshots <strong>ou</strong> vídeo para
+cada EAN — não os dois.</li>
 </ul>
 <h3 id="o-que-o-worker-deve-fazer">2.3. O que o worker deve fazer</h3>
 <ol type="1">
@@ -679,8 +719,14 @@ arquivo</li>
 <code>evidencias</code></li>
 <li>Para cada produto, criar a pasta da marca (se ainda não existir) e
 dentro dela a pasta com o EAN do produto</li>
-<li>Salvar todos os screenshots dentro da subpasta
-<code>screenshots</code> dessa pasta de EAN</li>
+<li>Para cada EAN, salvar a evidência de <strong>uma</strong> das duas
+formas (não as duas):
+<ul>
+<li><strong>Screenshots:</strong> dentro da subpasta
+<code>screenshots</code> da pasta do EAN</li>
+<li><strong>Vídeo:</strong> arquivo <code>[EAN].mp4</code> diretamente
+na pasta do EAN (ex.: <code>7891234567890.mp4</code>)</li>
+</ul></li>
 <li>Atualizar a planilha de controle ao final de cada produto conferido
 (ver seção 3)</li>
 </ol>
@@ -706,8 +752,8 @@ e é atualizada ao final de cada produto conferido.</p>
 <li><strong>Produto</strong> — nome do produto conforme aparece no
 Hub</li>
 <li><strong>EAN</strong> — código (quando aplicável)</li>
-<li><strong>Resultado</strong> — "Aprovado", "Enviado para revisão" ou
-"Aprovado em lote"</li>
+<li><strong>Resultado</strong> — "Aprovado", "Enviado para revisão",
+"Aprovado em lote" ou "Já estava revisado"</li>
 <li><strong>Motivo de revisão</strong> — preenchido apenas quando
 enviado para revisão</li>
 <li><strong>Tempo gasto (min)</strong> — estimativa</li>
@@ -751,8 +797,8 @@ fazer</span></a></li>
 </main>
 <footer class="site-footer">
   <div class="shell-wide row">
-    <a href="https://novosite.baselabs.com.br/" aria-label="BASE/labs">
-      <img src="https://novosite.baselabs.com.br/logo-azul.webp" alt="BASE/labs">
+    <a href="https://baselabs.com.br/" aria-label="BASE/labs">
+      <img src="https://propostas.baselabs.com.br/beclean/logo-azul.webp" alt="BASE/labs">
     </a>
     <div class="legal">
       <span>© 2026 BASE/labs · Braço de IA da BASE2</span>

@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acompanhamento Workers · BeClean · BASE/labs</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500;1,600&display=swap">
+<link rel="icon" href="https://propostas.baselabs.com.br/beclean/favicon-32.webp" sizes="32x32" type="image/webp">
+<style>
+:root {
+  --bg: #f6f7f9;
+  --bg-1: #ffffff;
+  --bg-2: #eef0f4;
+  --fg: #14182a;
+  --fg-2: #404862;
+  --fg-3: #6a7488;
+  --brand: #3654ae;
+  --brand-2: #2a4490;
+  --brand-coral: #ff6e5a;
+  --line: #acb8ca;
+  --line-soft: #d1d7e0;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --r-3: 8px;
+  --ok: #166534;
+  --ok-bg: #dcfce7;
+  --alerta: #854d0e;
+  --alerta-bg: #fef9c3;
+  --ruim: #991b1b;
+  --ruim-bg: #fee2e2;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 15px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+.shell-wide { width: min(1200px, 100% - 48px); margin-inline: auto; }
+.site-header {
+  position: sticky; top: 0; z-index: 80;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: saturate(140%) blur(8px);
+  -webkit-backdrop-filter: saturate(140%) blur(8px);
+  border-bottom: 1px solid var(--line-soft);
+}
+.site-header .row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; height: 64px;
+}
+.site-header img { height: 28px; width: auto; }
+.site-header .crumbs { font-size: 12px; color: var(--fg-3); letter-spacing: 0.04em; }
+.site-header .crumbs a { color: var(--fg-2); text-decoration: none; }
+.site-header .crumbs a:hover { color: var(--brand); }
+.cover {
+  padding: clamp(48px, 8vw, 80px) 0 clamp(28px, 5vw, 48px);
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--bg-1);
+}
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--fg-3); letter-spacing: 0.04em;
+  text-transform: lowercase; margin-bottom: 20px;
+}
+.eyebrow .bar { width: 24px; height: 2px; background: var(--brand); display: inline-block; }
+.cover h1 {
+  font-family: var(--mono);
+  font-size: clamp(28px, 4.5vw, 52px);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin: 0 0 20px;
+  color: var(--fg);
+}
+.cover h1 em { font-style: italic; font-weight: 400; color: var(--brand); }
+.cover .meta {
+  margin-top: 28px;
+  display: flex; gap: 32px; flex-wrap: wrap;
+  font-size: 13px;
+}
+.cover .meta .k { color: var(--fg-3); letter-spacing: 0.04em; }
+.cover .meta .v { color: var(--fg); margin-top: 4px; }
+.content { padding: clamp(40px, 6vw, 72px) 0 clamp(56px, 8vw, 100px); }
+.section-title {
+  font-size: clamp(18px, 2.2vw, 24px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0 0 24px;
+  color: var(--fg);
+  display: flex; align-items: center; gap: 10px;
+}
+.section-title::before { content: "//"; color: var(--brand); font-weight: 400; }
+.section-desc { font-size: 14px; color: var(--fg-3); margin: -16px 0 24px; }
+.report-wrap { overflow-x: auto; margin-bottom: 56px; }
+.report-table {
+  border-collapse: collapse;
+  font-size: 13px;
+  border-radius: var(--r-3);
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  table-layout: auto;
+  white-space: nowrap;
+}
+.report-table thead th {
+  text-align: left;
+  padding: 10px 10px;
+  background: var(--fg);
+  color: var(--bg-1);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 600;
+  border-right: 1px solid rgba(255,255,255,0.08);
+  white-space: normal;
+  line-height: 1.35;
+  vertical-align: bottom;
+}
+.report-table thead th:last-child { border-right: 0; }
+.report-table tbody tr { transition: background 0.1s; }
+.report-table tbody tr:nth-child(odd) { background: var(--bg-1); }
+.report-table tbody tr:nth-child(even) { background: var(--bg-2); }
+.report-table tbody tr:hover { background: #dde1ea; }
+.report-table td {
+  padding: 10px 10px;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line-soft);
+  border-right: 1px solid var(--line-soft);
+  line-height: 1.4;
+}
+.report-table td:last-child { border-right: 0; }
+.report-table tbody tr:last-child td { border-bottom: 0; }
+.col-rank { text-align: center; color: var(--fg-3); font-size: 12px; }
+.col-nome strong { display: block; color: var(--fg); font-weight: 600; }
+.col-erros { text-align: center; }
+.erros-badge { font-weight: 700; }
+.col-num { text-align: center; color: var(--fg); }
+.col-vazao { text-align: center; }
+.col-vazao-val { font-weight: 600; color: var(--brand); cursor: help; }
+.col-ev { text-align: center; font-weight: 600; }
+.row-total td {
+  background: var(--bg-2) !important;
+  border-top: 2px solid var(--line);
+  color: var(--fg);
+}
+sup.badge-invalido {
+  font-size: 10px; font-weight: 600;
+  background: var(--ruim-bg); color: var(--ruim);
+  padding: 1px 5px; border-radius: 999px;
+  vertical-align: middle; margin-left: 4px;
+  letter-spacing: 0.02em; cursor: help;
+}
+.report-table tr:has(+ .row-details-wrap) td { border-bottom: none; }
+.row-details-wrap td {
+  padding: 0 10px 0 10px;
+  border-top: none;
+  background: inherit;
+  white-space: normal;
+}
+.row-details {
+  border-bottom: 1px solid var(--line-soft);
+  padding-bottom: 12px;
+}
+.det-summary {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+  text-transform: lowercase; color: var(--fg-3);
+  cursor: pointer; padding: 10px 0 0;
+  list-style: none; display: flex; align-items: center; gap: 6px;
+  user-select: none;
+}
+.det-summary::-webkit-details-marker { display: none; }
+.det-summary::before {
+  content: "▶"; font-size: 9px; color: var(--brand);
+  transition: transform 0.15s;
+}
+details[open] .det-summary::before { transform: rotate(90deg); }
+.det-summary:hover { color: var(--fg-2); }
+.det-body {
+  padding: 10px 0 0;
+  display: flex; flex-wrap: wrap; gap: 16px 32px;
+}
+.det-secao { flex: 1 1 260px; }
+.det-label {
+  display: inline-block; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--fg-3); margin-bottom: 6px;
+}
+.det-marcas { font-size: 11px; color: var(--fg-3); display: block; line-height: 1.6; }
+.prob-label-ruim  { color: var(--ruim) !important; }
+.prob-label-alerta { color: var(--alerta) !important; }
+.badge {
+  display: inline-block; padding: 3px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.04em; text-transform: lowercase;
+}
+.badge-ok     { background: var(--ok-bg);     color: var(--ok); }
+.badge-alerta { background: var(--alerta-bg); color: var(--alerta); }
+.badge-ruim   { background: var(--ruim-bg);   color: var(--ruim); }
+.val-ok    { color: var(--ok);    font-weight: 600; }
+.val-alerta{ color: var(--alerta);font-weight: 600; }
+.val-ruim  { color: var(--ruim);  font-weight: 600; }
+.val-nd    { color: var(--fg-3); }
+.criterio-box {
+  background: var(--bg-1); border: 1px solid var(--line-soft);
+  border-left: 3px solid var(--brand);
+  border-radius: 0 var(--r-3) var(--r-3) 0;
+  padding: 16px 20px; font-size: 13.5px;
+  color: var(--fg-2); margin-top: 32px;
+}
+.criterio-sub { margin: 14px 0 4px; font-weight: 600; color: var(--fg); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+.criterio-box ol { margin: 4px 0 0 20px; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.criterio-box ol li { color: var(--fg-2); }
+.criterio-box code {
+  font-family: var(--mono); background: var(--bg-2);
+  border: 1px solid var(--line-soft); border-radius: 3px;
+  padding: 0 4px; font-size: 12px; color: var(--fg);
+}
+.prob-list {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.prob-list li {
+  font-size: 12px; color: var(--fg-2);
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px;
+}
+.prob-list code {
+  font-family: var(--mono); background: var(--bg-2);
+  border: 1px solid var(--line-soft); border-radius: 3px;
+  padding: 0 4px; font-size: 11px; color: var(--fg); flex-shrink: 0;
+}
+.prob-grupo { margin-top: 6px; }
+.prob-grupo-marca { display: block; font-size: 11px; font-weight: 600; color: var(--fg-2); margin-bottom: 3px; letter-spacing: 0.02em; }
+.prob-produto { color: var(--fg-2); font-size: 11px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prob-valor { color: var(--ruim); font-size: 11px; font-style: italic; }
+.site-footer {
+  border-top: 1px solid var(--line-soft); background: var(--bg-1);
+  padding: 40px 0 48px; font-size: 13px; color: var(--fg-3);
+}
+.site-footer .row {
+  display: flex; gap: 24px; flex-wrap: wrap;
+  justify-content: space-between; align-items: center;
+}
+.site-footer img { height: 22px; opacity: 0.85; }
+.site-footer a { color: var(--fg-2); text-decoration: none; }
+.site-footer a:hover { color: var(--brand); }
+@media (max-width: 640px) {
+  body { font-size: 14px; }
+  .shell-wide { width: min(640px, 100% - 32px); }
+  .cover h1 { font-size: 26px; }
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="shell-wide row">
+    <a href="https://baselabs.com.br/" aria-label="BASE/labs">
+      <img src="https://propostas.baselabs.com.br/beclean/logo-azul.webp" alt="BASE/labs">
+    </a>
+    <div class="crumbs">
+      <a href="https://baselabs.com.br/">base/labs</a>
+      &nbsp;/&nbsp; beclean
+      &nbsp;/&nbsp; acompanhamento workers
+    </div>
+  </div>
+</header>
+
+<section class="cover">
+  <div class="shell-wide">
+    <div class="eyebrow"><span class="bar"></span>uso interno · base/labs</div>
+    <h1>Acompanhamento<br><em>Workers BeClean</em></h1>
+    <div class="meta">
+      <div><div class="k">referência</div><div class="v">23 de maio de 2026 às 10:01</div></div>
+      <div><div class="k">tarefa</div><div class="v">Validação de Scraping (Pré-Aprovados)</div></div>
+      <div><div class="k">workers ativos</div><div class="v">15</div></div>
+      <div><div class="k">produtos validados</div><div class="v">2044</div></div>
+      <div><div class="k">cobertura de evidências</div><div class="v">87%</div></div>
+    </div>
+  </div>
+</section>
+
+<main class="content">
+  <div class="shell-wide">
+
+    <h2 class="section-title">Tabela de resultados</h2>
+    <p class="section-desc">Ordenado por número de produtos validados.</p>
+
+    <div class="report-wrap">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Worker</th>
+            <th title="Total de problemas: EANs sem resultado, resultado inválido, sem evidência, sem pasta no Drive, EAN suspeito">Erros</th>
+            <th title="Produtos registrados na planilha">Vali&shy;dados</th>
+            <th title="Resultado = Aprovado">Apro&shy;vados</th>
+            <th title="Resultado = Enviado para revisão">Para revi&shy;são</th>
+            <th title="Resultado = Já estava revisado">Já revi&shy;sado</th>
+            <th title="Resultado em branco na planilha">Sem resul&shy;tado</th>
+            <th title="Produtos validados por dia corrido desde a criação da planilha">Vazão<br>(prod/dia)</th>
+            <th title="Pastas de EAN com evidência confirmada / total de EANs na planilha">Evidências<br>(enc/esp)</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+  <tr>
+    <td class="col-rank">#1</td>
+    <td class="col-nome"><strong>Camila Teixeira Ferreira</strong></td>
+    <td class="col-erros"><span class="val-nd">—</span></td>
+    <td class="col-num">299</td>
+    <td class="col-num">13</td>
+    <td class="col-num">215</td>
+    <td class="col-num">71</td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-vazao"><span class="col-vazao-val" title="7.7 dias corridos">38.8</span></td>
+    <td class="col-ev"><span class="val-alerta">238/299</span></td>
+  </tr>
+  <tr class="row-details-wrap">
+    <td></td>
+    <td colspan="9"><details class="row-details"><summary class="det-summary">detalhes</summary><div class="det-body"><div class="det-secao"><span class="det-label">marcas</span><span class="det-marcas">NEW BRAND, NIINA SECRETS, Niina Secrets, NINA RICCI, NIOXIN, Nivea, Novex, Ny Looks, OCÉANE</span></div></div></details></td>
+  </tr>
+  <tr>
+    <td class="col-rank">#2</td>
+    <td class="col-nome"><strong>Nicolle Dognini</strong></td>
+    <td class="col-erros"><span class="val-ruim erros-badge">204</span></td>
+    <td class="col-num">299</td>
+    <td class="col-num">10</td>
+    <td class="col-num">85</td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-num">204</td>
+    <td class="col-vazao"><span class="col-vazao-val" title="7.7 dias corridos">38.8</span></td>
+    <td class="col-ev"><span class="val-ruim">95/299</span></td>
+  </tr>
+  <tr class="row-details-wrap">
+    <td></td>
+    <td colspan="9"><details class="row-details"><summary class="det-summary">detalhes · 204 problemas</summary><div class="det-body"><div class="det-secao"><span class="det-label">marcas</span><span class="det-marcas">Adcos, Adidas, Alva, AMACIHAIR, ANTONIO BANDERAS, Aussie, Avène, AZZARO, Baby & Kids, BANDERAS, BANILA CO, Banila Co, BEAUTYCOLOR, BELA&COR, BENETTON, Biocolor, BIODERMA, Bioderma, Boca Rosa, BOCA ROSA, BOSS, BOUCHERON, Bourjois, Bozzano, BRAÉ, BRAÉ HAIR CARE, BRITNEY SPEARS, BRUNA TAVARES, Bruna Tavares, BURBERRY, BVLGARI, CACHAREL, CALVIN KLEIN, CARE Natural Beauty, CAROLINA HERRERA, CARTIER, FELPS, Felps Color, Felps Professional</span></div><div class="det-secao"><span class="det-label prob-label-ruim">sem resultado (204)</span><div class="prob-grupo"><span class="prob-grupo-marca">AZZARO</span><ul class="prob-list"><li><code>3614273667418</code><span class="prob-produto">perfume azzaro sport masculino eau de toilette</span></li><li><code>3351500020416</code><span class="prob-produto">perfume azzaro chrome masculino eau de toilette</span></li><li><code>3614273521307</code><span class="prob-produto">perfume azzaro the most wanted masculino eau de parfum intense</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">BANDERAS</span><ul class="prob-list"><li><code>8411061057674</code><span class="prob-produto">perfume banderas the secret flame masculino eau de toilette</span></li><li><code>8411061057681</code><span class="prob-produto">perfume banderas her secret flame feminino eau de toilette</span></li><li><code>8411061083970</code><span class="prob-produto">perfume banderas the icon attitude masculino eau de parfum</span></li><li><code>8411061088586</code><span class="prob-produto">perfume banderas her secret absolu feminino eau de parfum</span></li><li><code>8411061084052</code><span class="prob-produto">perfume antonio banderas blue seduction summer essence feminino eau de toilette</span></li><li><code>8411061124277</code><span class="prob-produto">perfume banderas the icon intense woman feminino eau de parfum</span></li><li><code>8411061084946</code><span class="prob-produto">perfume banderas the icon splendid for women feminino eau de parfum</span></li><li><code>8411061109687</code><span class="prob-produto">perfume banderas the icon supreme intense masculino eau de parfum</span></li><li><code>8411061011140</code><span class="prob-produto">perfume antonio banderas queen of seduction lively muse feminino eau de toilette</span></li><li><code>8411061034989</code><span class="prob-produto">perfume banderas the icon woman feminino eau de parfum</span></li><li><code>8411061104859</code><span class="prob-produto">perfume antonio banderas king of seduction summerland masculino eau de toilette</span></li><li><code>8411061701034</code><span class="prob-produto">perfume antonio banderas the secret masculino eau de toilette</span></li><li><code>8411061104873</code><span class="prob-produto">perfume antonio banderas queen of seduct summerland feminino eau de toilette</span></li><li><code>8411061088555</code><span class="prob-produto">perfume banderas the secret absolu masculino eau de parfum</span></li><li><code>8411061849330</code><span class="prob-produto">perfume antonio banderas diavolo masculino eau de toilette</span></li><li><code>8411061057254</code><span class="prob-produto">perfume antonio banderas power of seduction intense ice masculino eau de toilette</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">BANILA CO</span><ul class="prob-list"><li><code>8809560228198</code><span class="prob-produto">balm de limpeza banila co clean it zero cleansing balm pore clarifying</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">BEAUTYCOLOR</span><ul class="prob-list"><li><code>7896509973692</code><span class="prob-produto">Coloração Kit BEAUTYCOLOR - 66.26 Marsala Infalível</span></li><li><code>7896509954950</code><span class="prob-produto">Coloração Kit BEAUTYCOLOR - 2.11 Preto Azulado</span></li><li><code>7896509954943</code><span class="prob-produto">Coloração Kit BEAUTYCOLOR - 2.0 Preto</span></li><li><code>7896509973708</code><span class="prob-produto">Coloração Kit BEAUTYCOLOR - 76.44 Ruivo Absoluto</span></li><li><code>7896509955216</code><span class="prob-produto">Coloração Kit BEAUTYCOLOR - 7.1 Louro Natural Acinzentado</span></li><li><code>7896509954981</code><span class="prob-produto">Coloração Kit BEAUTYCOLOR - 4.0 Castanho Natural</span></li><li><code>7896509955100</code><span class="prob-produto">Coloração Kit BEAUTYCOLOR - 6.0 Louro Escuro</span></li><li><code>7896509954967</code><span class="prob-produto">Coloração Kit BEAUTYCOLOR - 3.0 Castanho Escuro</span></li><li><code>7896509955025</code><span class="prob-produto">Coloração Kit BEAUTYCOLOR - 5.0 Castanho Claro</span></li><li><code>7896509955117</code><span class="prob-produto">Coloração Kit BEAUTYCOLOR - 6.1 Louro Escuro Acinzentado</span></li><li><code>7896509974903</code><span class="prob-produto">Coloração Kit BEAUTYCOLOR - 1.0 Preto Ônix</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">BELA&COR</span><ul class="prob-list"><li><code>7896509972138</code><span class="prob-produto">Coloração Bela&Cor - 5.0 Castanho Claro</span></li><li><code>7896509972114</code><span class="prob-produto">Coloração Bela&Cor - 4.0 Castanho Médio</span></li><li><code>7896509976631</code><span class="prob-produto">Coloração Bela&Cor Sem Amônia - 4.0 Castanho Médio</span></li><li><code>7896509976617</code><span class="prob-produto">Coloração Bela&Cor Sem Amônia - 2.11 Preto Azulado</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">BENETTON</span><ul class="prob-list"><li><code>8433982019562</code><span class="prob-produto">perfume benetton we are tribe masculino eau de toilette</span></li><li><code>8433982024122</code><span class="prob-produto">perfume benetton sisterland yellow peony feminino eau de toilette</span></li><li><code>8433982025570</code><span class="prob-produto">perfume benetton colors free feminino eau de toilette</span></li><li><code>8433982018749</code><span class="prob-produto">perfume benetton sisterland red rose feminino eau de toilette</span></li><li><code>8433982018701</code><span class="prob-produto">sisterland blue neroli eau de toilette</span></li><li><code>8433982025594</code><span class="prob-produto">perfume benetton colors free masculino eau de toilette</span></li><li><code>8433982025549</code><span class="prob-produto">perfume benetton we are tribe cool masculino eau de toilette</span></li><li><code>8433982025686</code><span class="prob-produto">perfume benetton united dreams green amazonia for her feminino eau de toilette</span></li><li><code>8433982025709</code><span class="prob-produto">perfume benetton united dreams green amazonia for him masculino eau de toilette</span></li><li><code>8433982026218</code><span class="prob-produto">perfume benetton united colors man black intenso masculino eau de parfum</span></li><li><code>8433982013201</code><span class="prob-produto">perfume benetton colors man black masculino eau de toilette</span></li><li><code>8433982027338</code><span class="prob-produto">perfume benetton united sisterland blush cherry feminino eau de parfum</span></li><li><code>8433982024092</code><span class="prob-produto">perfume benetton united dreams green cactus feminino eau de toilette</span></li><li><code>8433982017070</code><span class="prob-produto">united dreams love yourself eau de toilette</span></li><li><code>8433982003400</code><span class="prob-produto">perfume benetton united dreams aim high masculino eau de toilette</span></li><li><code>8433982017124</code><span class="prob-produto">perfume benetton united dreams live free feminino eau de toilette</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">BIODERMA</span><ul class="prob-list"><li><code>3401395376935</code><span class="prob-produto">água micelar bioderma sébium h2o</span></li><li><code>3401395376706</code><span class="prob-produto">água micelar bioderma calmante sensibio h2o</span></li><li><code>3401528521157</code><span class="prob-produto">água micelar bioderma fortalecedora hydrabio</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">BOCA ROSA</span><ul class="prob-list"><li><code>7908847800704</code><span class="prob-produto">pó compacto translúcido boca rosa</span></li><li><code>7908847801879</code><span class="prob-produto">Stick Cor Multifuncional</span></li><li><code>7908847801633</code><span class="prob-produto">Hidra Lábios</span></li><li><code>7908847802340</code><span class="prob-produto">Contorno Labial</span></li><li><code>7908847800001</code><span class="prob-produto">base multifuncional boca rosa stick pele</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">BOSS</span><ul class="prob-list"><li><code>3614229828535</code><span class="prob-produto">BOSS Bottled Eau de Parfum 100ML</span></li><li><code>3616303173098</code><span class="prob-produto">BOSS Bottled Parfum 100 ml</span></li><li><code>3614228220897</code><span class="prob-produto">BOSS Bottled Infinite Eau de Parfum 100ml</span></li><li><code>8005610255668</code><span class="prob-produto">BOSS Bottled Tonic Eau de Toilette 100ml</span></li><li><code>3616304691645</code><span class="prob-produto">BOSS Bottled Elixir Parfum 100ml</span></li><li><code>3614228830393</code><span class="prob-produto">BOSS Alive Eau de Parfum 80ml</span></li><li><code>3614228220880</code><span class="prob-produto">BOSS Bottled Infinite Eau de Parfum 200ml</span></li><li><code>3616306096196</code><span class="prob-produto">BOSS Bottled Beyond Eau de Parfum for Him 50ml</span></li><li><code>8005610255613</code><span class="prob-produto">BOSS Bottled Tonic Eau de Toilette 50ml</span></li><li><code>3616303173104</code><span class="prob-produto">BOSS Bottled Parfum 200 ml</span></li><li><code>3616305821089</code><span class="prob-produto">BOSS Bottled Bold Citrus Eau de Parfum 100ml</span></li><li><code>3616306096202</code><span class="prob-produto">BOSS Bottled Beyond Eau de Parfum for Him 100ml</span></li><li><code>3616305040589</code><span class="prob-produto">BOSS The Scent Magnetic Eau de Parfum for Her 30ml</span></li><li><code>3616306096219</code><span class="prob-produto">BOSS Bottled Beyond Eau de Parfum for Him 150ml</span></li><li><code>3616305169211</code><span class="prob-produto">BOSS Bottled The Scent Elixir Feminino 30ML</span></li><li><code>3614228830515</code><span class="prob-produto">BOSS Alive Eau de Parfum 50ml</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">BOUCHERON</span><ul class="prob-list"><li><code>3386460129398</code><span class="prob-produto">perfume boucheron quatre iconic feminino eau de parfum</span></li><li><code>3386460129749</code><span class="prob-produto">perfume boucheron la collection feve tonka feminino eau de parfum</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">BRAÉ</span><ul class="prob-list"><li><code>7898667822911</code><span class="prob-produto">condicionador braé blonde oil by ana paula siebert</span></li><li><code>7898667822973</code><span class="prob-produto">máscara capilar condicionante braé blonde oil by ana paula siebert</span></li><li><code>7898667823277</code><span class="prob-produto">condicionador braé stages by bruna tavares gloss hydra</span></li><li><code>7898667822898</code><span class="prob-produto">shampoo brae blonde oil by ana paula siebert</span></li><li><code>7898667822959</code><span class="prob-produto">shampoo braé intense repair by ana paula siebert</span></li><li><code>7898667822935</code><span class="prob-produto">condicionador braé intense repair by ana paula siebert</span></li><li><code>7898667823260</code><span class="prob-produto">shampoo braé stages by bruna tavares gloss hydra</span></li><li><code>7898667823284</code><span class="prob-produto">máscara capilar condicionante braé stages by bruna tavares gloss hydra</span></li><li><code>7898667822904</code><span class="prob-produto">fluído capilar condicionante braé intense repair by ana paula siebert</span></li><li><code>7898667820023</code><span class="prob-produto">fortificante pós químico braé bond angel passo 3</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">BRAÉ HAIR CARE</span><ul class="prob-list"><li><code>7898667822942</code><span class="prob-produto">óleo capilar condicionante braé blonde oil by ana paula siebert</span></li><li><code>7898667822928</code><span class="prob-produto">óleo capilar condicionante braé intense repair by ana paula siebert</span></li><li><code>7898667823017</code><span class="prob-produto">máscara capilar condicionante braé intense repair by ana paula siebert</span></li><li><code>7898667823307</code><span class="prob-produto">óleo capilar condicionante braé stages by bruna tavares gloss hydra</span></li><li><code>7898667823291</code><span class="prob-produto">leave in condicionante braé stages by bruna tavares gloss hydra spray</span></li><li><code>7898667823024</code><span class="prob-produto">ampola de nutrição condicionante braé blonde oil by ana paula siebert power</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">BRITNEY SPEARS</span><ul class="prob-list"><li><code>719346065405</code><span class="prob-produto">perfume britney spears fantasy feminino eau de parfum</span></li><li><code>719346258128</code><span class="prob-produto">perfume britney spears blissful fantasy feminino eau de toilette</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">BRUNA TAVARES</span><ul class="prob-list"><li><code>7898741807230</code><span class="prob-produto">blush iluminador bruna tavares cushion glow</span></li><li><code>7896032673960</code><span class="prob-produto">sombra líquida bruna tavares et</span></li><li><code>7896032677043</code><span class="prob-produto">sombra líquida bruna tavares disney wish</span></li><li><code>7898741807339</code><span class="prob-produto">batom vinílico bruna tavares</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">BURBERRY</span><ul class="prob-list"><li><code>3616301975748</code><span class="prob-produto">perfume burberry her feminino eau de toilette</span></li><li><code>3616304967108</code><span class="prob-produto">perfume buberry goddess intense feminino eau de parfum</span></li><li><code>3614226905963</code><span class="prob-produto">perfume my burberry feminino eau de parfum</span></li><li><code>3616304679445</code><span class="prob-produto">perfume burberry hero masculino parfum</span></li><li><code>3616305181060</code><span class="prob-produto">perfume burberry her feminino eau de parfum intense</span></li><li><code>3614229820782</code><span class="prob-produto">perfume burberry hero masculino eau de toilette</span></li><li><code>3614226905147</code><span class="prob-produto">perfume burberry brit sheer feminino eau de toilette</span></li><li><code>3616304967153</code><span class="prob-produto">perfume travel size burberry goddess intense feminino eau de parfum</span></li><li><code>3616304679469</code><span class="prob-produto">refil perfume burberry hero masculino parfum</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">BVLGARI</span><ul class="prob-list"><li><code>783320404702</code><span class="prob-produto">perfume bvlgari rose goldea blossom delight feminino eau de parfum</span></li><li><code>783320417023</code><span class="prob-produto">perfume bvlgari rose goldea blossom delight feminino eau de toilette</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">Baby & Kids</span><ul class="prob-list"><li><code>7896044956389</code><span class="prob-produto">Sabonete Líquido Giby 200ml</span></li><li><code>7896044956365</code><span class="prob-produto">Condicionador Giby 200ml</span></li><li><code>7896044956358</code><span class="prob-produto">Shampoo Giby 200ml</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">Banila Co</span><ul class="prob-list"><li><code>8809560228204</code><span class="prob-produto">espuma de limpeza para pele oleosa banila co pore clarifying</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">Biocolor</span><ul class="prob-list"><li><code>7891350038941</code><span class="prob-produto">Tintura de Cabelo Biocolor Preto Intenso Noite de Gala 1.7</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">Bioderma</span><ul class="prob-list"><li><code>3701129814420</code><span class="prob-produto">água micelar sensibio h2o bioderma</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">Boca Rosa</span><ul class="prob-list"><li><code>7908847800636</code><span class="prob-produto">pó compacto boca rosa</span></li><li><code>7908847801541</code><span class="prob-produto">Máscara para Sobrancelhas</span></li><li><code>7908847801534</code><span class="prob-produto">Máscara de Cílios</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">Bourjois</span><ul class="prob-list"><li><code>3616303393137</code><span class="prob-produto">Perfume Mon Bourjois La Magnetique Eau de Parfum Feminino 50 ml - Perfume Mon Bourjois Magnetique Eau de Parfum Feminino 50 ml</span></li><li><code>3616303393069</code><span class="prob-produto">Perfume Mon Bourjois La Formidable Eau de Parfum Feminino 50 ml</span></li><li><code>3616303393052</code><span class="prob-produto">Perfume Mon Bourjois La Fantastique Eau de Parfum Feminino 50 ml - Perfume Mon Bourjois Fantastique Eau de Parfum Feminino 50 ml</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">Bozzano</span><ul class="prob-list"><li><code>7891350034868</code><span class="prob-produto">Gel Condicionador para Cabelo Bozzano com Fator 4 300g - Bozzano Gel Condicionador Fator 4 300g</span></li><li><code>7891350011043</code><span class="prob-produto">Creme de Barbear Bozzano Hidratação 65g</span></li><li><code>7891350036695</code><span class="prob-produto">Shampoo Barba, Cabelo e Bigode Bozzano 200ml</span></li><li><code>7891350011623</code><span class="prob-produto">Creme de Barbear Bozzano Pele Sensível 65g</span></li><li><code>7891350032741</code><span class="prob-produto">Desodorante Antitranspirante Aerossol Masculino Bozzano Fresh 150ml</span></li><li><code>7891350000092</code><span class="prob-produto">Espuma de Barbear Bozzano Hidratação 200ml</span></li><li><code>7891350032406</code><span class="prob-produto">Desodorante Bozzano Antitranspirante Aerossol Sensitive - Desodorante Bozzano Aerossol Sensitive</span></li><li><code>7891350037807</code><span class="prob-produto">Desodorante Aerossol Antitranspirante Masculino Bozzano Power Protection 150ml</span></li><li><code>7891350000115</code><span class="prob-produto">Espuma de Barbear Bozzano Refrescante 200ml</span></li><li><code>7891350025187</code><span class="prob-produto">Espuma de Barbear Bozzano Pele Sensível 200ml</span></li><li><code>7891350026627</code><span class="prob-produto">Loção Facial Pós-Barba Bozzano Night Blue 100ml</span></li><li><code>7891350039986</code><span class="prob-produto">Shampoo Antiqueda 3x1 Bozzano 325ml</span></li><li><code>7891350039955</code><span class="prob-produto">Shampoo Anticaspa 3x1 Bozzano 200ml</span></li><li><code>7891350002409</code><span class="prob-produto">Creme de Barbear Bozzano Refrescante 65g</span></li><li><code>7891350032970</code><span class="prob-produto">Desodorante Aerossol Antitranspirante Masculino Bozzano Invisible 150ml</span></li><li><code>7891350032857</code><span class="prob-produto">Bozzano Desodorante Aerossol Antitranspirante Masculino Extreme 150ml - Desodorante Aerossol Antitranspirante Masculino Bozzano Extreme 150ml</span></li><li><code>7891350037791</code><span class="prob-produto">Desodorante Aerossol Antitranspirante Masculino Bozzano Dry 150ml</span></li><li><code>7891350039979</code><span class="prob-produto">Shampoo Antiqueda 3x1 Bozzano 200ml</span></li><li><code>7891350039993</code><span class="prob-produto">Condicionador Antiqueda 3x1 Bozzano 200ml</span></li><li><code>7891350047899</code><span class="prob-produto">Desodorante Bozzano Dry Aerossol Antitranspirante Masculino 200ml</span></li><li><code>7891350047905</code><span class="prob-produto">Desodorante Bozzano Fresh Aerossol Antitranspirante Masculino 200ml</span></li><li><code>7891350047882</code><span class="prob-produto">Desodorante Bozzano Power Protection Aerossol Antitranspirante Masculino 200ml</span></li><li><code>7891350041408</code><span class="prob-produto">Desodorante Bozzano Extreme Sport Aerossol Antitranspirante Masculino 200ml</span></li><li><code>7891350041415</code><span class="prob-produto">Desodorante Bozzano Invisible Aerossol Antitranspirante Masculino 200ml</span></li><li><code>7891350039962</code><span class="prob-produto">Shampoo Anticaspa 3x1 Bozzano 325ml</span></li><li><code>7891350036701</code><span class="prob-produto">Creme Modelador de Cabelo Bozzano com Ação Condicionante 140g - Creme Modelador de Cabelo Bozzano com ação condicionante 140g</span></li><li><code>7891350040012</code><span class="prob-produto">Shampoo Cachos e Crespos 3x1 Bozzano 325ml</span></li><li><code>7891350040005</code><span class="prob-produto">Shampoo Cachos e Crespos 3x1 Bozzano 200ml</span></li><li><code>7891350032673</code><span class="prob-produto">Bálsamo Pós-Barba Bozzano Hidratação 100g</span></li><li><code>7891350032680</code><span class="prob-produto">Bálsamo Pós-Barba Bozzano Pele Sensível 100g</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">Bruna Tavares</span><ul class="prob-list"><li><code>7898741805823</code><span class="prob-produto">Batom Líquido BT Lips - Bruna Tavares</span></li><li><code>7896032626119</code><span class="prob-produto">paleta de sombras bruna tavares disney wish</span></li><li><code>7898741806448</code><span class="prob-produto">Pó Solto BT Skinpowder - Bruna Tavares</span></li><li><code>7898741805922</code><span class="prob-produto">Base Líquida BT Skin - Bruna Tavares</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">CACHAREL</span><ul class="prob-list"><li><code>3360373063680</code><span class="prob-produto">amor amor feminino eau de toilette</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">CALVIN KLEIN</span><ul class="prob-list"><li><code>3616304478260</code><span class="prob-produto">perfume calvin klein my euphoria feminino eau de parfum</span></li><li><code>3616303476793</code><span class="prob-produto">perfume calvin klein eternity aromatic essence for women feminino parfum</span></li><li><code>3616303476830</code><span class="prob-produto">perfume calvin klein eternity aromatic essence for men masculino parfum</span></li><li><code>3616302016648</code><span class="prob-produto">perfume calvin klein defy masculino eau de parfum</span></li><li><code>3616301296683</code><span class="prob-produto">perfume calvin klein defy masculino eau de toilette</span></li><li><code>3616304248221</code><span class="prob-produto">perfume calvin klein euphoria for women feminino eau de toilette</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">CARE Natural Beauty</span><ul class="prob-list"><li><code>7908606101882</code><span class="prob-produto">Blush Iluminador Multifuncional Outubro Rosa | DUO Mauve & Stardust  - 10g</span></li><li><code>7908606101899</code><span class="prob-produto">Blush Iluminador Multifuncional Outubro Rosa | DUO Pink & Peach  - 10g</span></li><li><code>7908606101905</code><span class="prob-produto">Blush Iluminador Multifuncional Outubro Rosa | DUO Terracota & Rose  - 10g</span></li><li><code>7908606100137</code><span class="prob-produto">Bronzer | Clean Bronzer Rosé Glow</span></li><li><code>7908606100670</code><span class="prob-produto">Espuma de Limpeza Facial | Super Cleansing Foam - 140mL</span></li><li><code>7908606100915</code><span class="prob-produto">Creme Hidratante Facial Regeneração Intensa | Skincream Rich</span></li><li><code>7908606100922</code><span class="prob-produto">Hidratante Facial em Gel Fortalecedor | Skincream Light</span></li><li><code>7908606100304</code><span class="prob-produto">Lip Oil | CARE Nude Pink</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">CAROLINA HERRERA</span><ul class="prob-list"><li><code>8411061056752</code><span class="prob-produto">perfume carolina herrera good girl blush feminino eau de parfum</span></li><li><code>8411061105016</code><span class="prob-produto">perfume carolina herrera 212 vip black elixir masculino eau de parfum</span></li><li><code>8411061055199</code><span class="prob-produto">perfume carolina herrera ch pasión feminino eau de parfum</span></li><li><code>8411061083659</code><span class="prob-produto">perfume good girl blush elixir feminino eau de parfum</span></li><li><code>8411061055182</code><span class="prob-produto">perfume carolina herrera ch men pasión masculino eau de parfum</span></li><li><code>8411061853115</code><span class="prob-produto">perfume carolina herrera 212 men nyc masculino eau de toilette</span></li><li><code>8411061870518</code><span class="prob-produto">perfume carolina herrera 212 vip black masculino eau de parfum</span></li><li><code>8411061106228</code><span class="prob-produto">perfume carolina herrera very good girl feminino eau de parfum elixir</span></li><li><code>8411061934524</code><span class="prob-produto">perfume carolina herrera feminino eau de toilette</span></li><li><code>8411061093849</code><span class="prob-produto">perfume 212 men nyc mtv masculino eau de toilette</span></li><li><code>8411061106389</code><span class="prob-produto">perfume carolina herrera ch men wild love masculino eau de parfum</span></li><li><code>8411061023655</code><span class="prob-produto">perfume carolina herrera 212 heroes forever young masculino eau de toilette</span></li><li><code>8411061063392</code><span class="prob-produto">perfume carolina herrera bad boy masculino eau de toilette</span></li><li><code>8411061853207</code><span class="prob-produto">perfume carolina herrera 212 men nyc masculino eau de toilette</span></li><li><code>8411061906651</code><span class="prob-produto">perfume carolina herrera 212 nyc feminino eau de toilette</span></li><li><code>8411061996539</code><span class="prob-produto">perfume carolina herrera 212 heroes for her feminino eau de parfum</span></li><li><code>8411061027837</code><span class="prob-produto">bad boy cobalt eau de parfum masculino</span></li><li><code>8411061057056</code><span class="prob-produto">perfume bad boy extreme masculino eau de parfum</span></li><li><code>8411061072080</code><span class="prob-produto">perfume carolina herrera 212 heroes for her feminino eau de parfum</span></li><li><code>8411061711767</code><span class="prob-produto">perfume carolina herrera 212 vip feminino eau de parfum</span></li><li><code>8411061093252</code><span class="prob-produto">hair mist carolina herrera good girl blush feminino eau de parfum</span></li><li><code>8411061777183</code><span class="prob-produto">perfume carolina herrera 212 vip rosé feminino eau de parfum</span></li><li><code>8411061081600</code><span class="prob-produto">perfume carolina herrera for men masculino eau de toilette</span></li><li><code>8411061841655</code><span class="prob-produto">shower gel carolina herrera good girl feminino</span></li><li><code>8411061102886</code><span class="prob-produto">perfume carolina herrera good girl blush feminino eau de parfum</span></li><li><code>8411061972151</code><span class="prob-produto">perfume carolina herrera good girl suprême eau de parfum</span></li><li><code>8411061665022</code><span class="prob-produto">perfume carolina herrera ch men masculino eau de toilette</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">CARTIER</span><ul class="prob-list"><li><code>3432240504814</code><span class="prob-produto">perfume cartier rivières luxuriance unissex eau de toilette</span></li><li><code>3432240515377</code><span class="prob-produto">perfume cartier la panthere elixir feminino eau de parfum</span></li><li><code>3432240504692</code><span class="prob-produto">perfume cartier rivières allegresse unissex eau de toilette</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">FELPS</span><ul class="prob-list"><li><code>7898958542917</code><span class="prob-produto">Shampoo Sou Loira Reparador Felps Professional - 250mL</span></li><li><code>7898639795892</code><span class="prob-produto">Condicionador Uniq 6 em 1  Felps Professional - 250mL</span></li><li><code>7898639795212</code><span class="prob-produto">Acidificante Inner Regener Regeneração Felps professional - 120mL</span></li></ul></div></div></div></details></td>
+  </tr>
+  <tr>
+    <td class="col-rank">#3</td>
+    <td class="col-nome"><strong>Paula Machado Alves</strong></td>
+    <td class="col-erros"><span class="val-ruim erros-badge">1</span></td>
+    <td class="col-num">299</td>
+    <td class="col-num">95</td>
+    <td class="col-num">204</td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-vazao"><span class="col-vazao-val" title="7.7 dias corridos">38.8</span></td>
+    <td class="col-ev"><span class="val-alerta">368/299</span></td>
+  </tr>
+  <tr class="row-details-wrap">
+    <td></td>
+    <td colspan="9"><details class="row-details"><summary class="det-summary">detalhes · 1 problema</summary><div class="det-body"><div class="det-secao"><span class="det-label">marcas</span><span class="det-marcas">Felps professional, Fran By Franciny Ehlke, Gabriela Sabatini, GIORGIO ARMANI, Giovanna Baby, GIVENCHY, Granado, GUCCI, GUERLAIN, HEAD & SHOULDERS, Head & Shoulders, Herbissimo, Herbíssimo, HUGO BOSS, ISSEY MIYAKE, JEAN PAUL GAULTIER, JIMMY CHOO</span></div><div class="det-secao"><span class="det-label prob-label-alerta">na planilha sem pasta no Drive (1)</span><div class="prob-grupo"><span class="prob-grupo-marca">Herbíssimo</span><ul class="prob-list"><li><code>7896049528505</code><span class="prob-produto">Desodorante Creme Antitranspirante Neutro Herbíssimo 55G</span></li></ul></div></div></div></details></td>
+  </tr>
+  <tr>
+    <td class="col-rank">#4</td>
+    <td class="col-nome"><strong>Gustavo Norberto</strong></td>
+    <td class="col-erros"><span class="val-ruim erros-badge">5</span></td>
+    <td class="col-num">280</td>
+    <td class="col-num">134</td>
+    <td class="col-num">146</td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-vazao"><span class="col-vazao-val" title="3.5 dias corridos">79.3</span></td>
+    <td class="col-ev"><span class="val-alerta">274/280</span></td>
+  </tr>
+  <tr class="row-details-wrap">
+    <td></td>
+    <td colspan="9"><details class="row-details"><summary class="det-summary">detalhes · 5 problemas</summary><div class="det-body"><div class="det-secao"><span class="det-label">marcas</span><span class="det-marcas">Boticario, Nivea</span></div><div class="det-secao"><span class="det-label prob-label-alerta">evidência com problema (5)</span><div class="prob-grupo"><span class="prob-grupo-marca">Boticario</span><ul class="prob-list"><li><code>7891033521609</code><span class="prob-valor">sem evidência</span></li><li><code>7891033740437</code><span class="prob-valor">sem evidência</span></li><li><code>7891033744442</code><span class="prob-valor">sem evidência</span></li><li><code>7891033753932</code><span class="prob-valor">sem evidência</span></li><li><code>7891033819546</code><span class="prob-valor">screenshots/ vazia</span></li></ul></div></div></div></details></td>
+  </tr>
+  <tr>
+    <td class="col-rank">#5</td>
+    <td class="col-nome"><strong>Breno Souza</strong></td>
+    <td class="col-erros"><span class="val-ruim erros-badge">138</span></td>
+    <td class="col-num">138</td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-num">138</td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-vazao"><span class="col-vazao-val" title="3.5 dias corridos">39.1</span></td>
+    <td class="col-ev"><span class="val-alerta">135/138</span></td>
+  </tr>
+  <tr class="row-details-wrap">
+    <td></td>
+    <td colspan="9"><details class="row-details"><summary class="det-summary">detalhes · 138 problemas</summary><div class="det-body"><div class="det-secao"><span class="det-label">marcas</span><span class="det-marcas">Revlon</span></div><div class="det-secao"><span class="det-label prob-label-alerta">evidência com problema (3)</span><div class="prob-grupo"><span class="prob-grupo-marca">Revlon</span><ul class="prob-list"><li><code>0309970175153</code><span class="prob-valor">sem evidência</span></li><li><code>0309970251895</code><span class="prob-valor">screenshots/ vazia</span></li><li><code>0309970251970</code><span class="prob-valor">screenshots/ vazia</span></li></ul></div></div><div class="det-secao"><span class="det-label prob-label-alerta">na planilha sem pasta no Drive (135)</span><div class="prob-grupo"><span class="prob-grupo-marca">Revlon</span><ul class="prob-list"><li><code>309970175115</code><span class="prob-produto">ColorStay Matte Lite Crayon™ Lipstick</span></li><li><code>309970109257</code><span class="prob-produto">ColorStay Liquid Eyeliner Pen</span></li><li><code>309970185015</code><span class="prob-produto">ColorSilk™ with Bond Repair Complex Permanent Hair Dye</span></li><li><code>309977334027</code><span class="prob-produto">ColorStay Brow Creator™ Brow Pencil & Powder</span></li><li><code>309970213510</code><span class="prob-produto">ColorStay Flex Wear Full Cover™ Concealer</span></li><li><code>309970173555</code><span class="prob-produto">ColorStay Satin Ink™ Crown Jewels Liquid Lipstick</span></li><li><code>309970270926</code><span class="prob-produto">Super Lustrous Glimmer™ Lip Oil</span></li><li><code>309970188467</code><span class="prob-produto">ColorStay Micro™ Brow Pencil</span></li><li><code>309970289287</code><span class="prob-produto">Super Lustrous™ Glass Shine Balm</span></li><li><code>309970117139</code><span class="prob-produto">ColorStay Satin Ink Liquid Lipstick™</span></li><li><code>309970116316</code><span class="prob-produto">So Fierce!™ Prismatic Eye Shadow Palette</span></li><li><code>309970188474</code><span class="prob-produto">ColorStay Micro™ Brow Pencil</span></li><li><code>309970275730</code><span class="prob-produto">ColorStay™ Face + Body Glow Lotion</span></li><li><code>309973978010</code><span class="prob-produto">ColorStay™ Eyeliner</span></li><li><code>309970280468</code><span class="prob-produto">Super Lustrous Glimmer™ Lip Oil</span></li><li><code>309970281540</code><span class="prob-produto">Glimmer Tinted Moisturizer Stick</span></li><li><code>309970271367</code><span class="prob-produto">PhotoReady™ Instant Plump Serum</span></li><li><code>309970231118</code><span class="prob-produto">ColorStay Brow Fantasy™ Pencil & Gel</span></li><li><code>309970002466</code><span class="prob-produto">ColorStay™ Longwear Makeup SPF 20</span></li><li><code>309975912050</code><span class="prob-produto">Illuminance™ Crème Eye Shadow Palette</span></li><li><code>309970251949</code><span class="prob-produto">Super Lustrous™ Glass Shine Balm</span></li><li><code>309970184919</code><span class="prob-produto">ColorSilk™ with Bond Repair Complex Permanent Hair Dye</span></li><li><code>309970251963</code><span class="prob-produto">Super Lustrous™ Glass Shine Balm</span></li><li><code>309975424010</code><span class="prob-produto">Colorstay™ Pressed Powder</span></li><li><code>309970078331</code><span class="prob-produto">Super Lustrous The Lip Gloss™</span></li><li><code>309970093839</code><span class="prob-produto">SkinLights™ Prismatic Highlighter</span></li><li><code>309971335099</code><span class="prob-produto">ColorStay Full Cover™ Foundation</span></li><li><code>309973064553</code><span class="prob-produto">Super Lustrous The Lip Gloss™</span></li><li><code>309973174603</code><span class="prob-produto">ColorStay Ultimate™ Liquid Lipstick</span></li><li><code>309979380282</code><span class="prob-produto">ColorStay Overtime™ Lipcolor</span></li><li><code>309975415087</code><span class="prob-produto">ColorStay™ Longwear Makeup SPF 20</span></li><li><code>309970187064</code><span class="prob-produto">ColorStay Suede Ink™ Lipstick</span></li><li><code>309970175177</code><span class="prob-produto">ColorStay Matte Lite Crayon™ Lipstick</span></li><li><code>309975415070</code><span class="prob-produto">ColorStay™ Longwear Makeup SPF 20</span></li><li><code>309970213534</code><span class="prob-produto">ColorStay Flex Wear Full Cover™ Concealer</span></li><li><code>309970126506</code><span class="prob-produto">So Fierce!™ Big Bad Lash Mascara</span></li><li><code>309970289300</code><span class="prob-produto">Super Lustrous™ Glass Shine Balm</span></li><li><code>309970117115</code><span class="prob-produto">ColorStay Satin Ink Liquid Lipstick™</span></li><li><code>309974784146</code><span class="prob-produto">Powder Blush</span></li><li><code>309970187170</code><span class="prob-produto">ColorStay Suede Ink™ Lipstick</span></li><li><code>309970131210</code><span class="prob-produto">ColorStay Satin Ink Liquid Lipstick™</span></li><li><code>309973064058</code><span class="prob-produto">Super Lustrous The Lip Gloss™</span></li><li><code>309971335051</code><span class="prob-produto">ColorStay Full Cover™ Foundatio</span></li><li><code>309970169343</code><span class="prob-produto">ColorStay Day to Night™ Eyeshadow Quad</span></li><li><code>309975424058</code><span class="prob-produto">Colorstay™ Pressed Powder</span></li><li><code>309970184803</code><span class="prob-produto">ColorSilk™ with Bond Repair Complex Permanent Hair Dye</span></li><li><code>309970078836</code><span class="prob-produto">Powder Blush</span></li><li><code>309970002541</code><span class="prob-produto">ColorStay™ Longwear Makeup SPF 20</span></li><li><code>309970187071</code><span class="prob-produto">ColorStay Suede Ink™ Lipstick</span></li><li><code>309977824153</code><span class="prob-produto">Kiss™ Balm, Hydrating Lip Balm Treatment</span></li><li><code>309977824252</code><span class="prob-produto">Kiss™ Balm, Hydrating Lip Balm Treatment</span></li><li><code>309970002459</code><span class="prob-produto">ColorStay™ Longwear Makeup SPF 20</span></li><li><code>309970187057</code><span class="prob-produto">ColorStay Suede Ink™ Lipstick</span></li><li><code>309970234218</code><span class="prob-produto">ColorStay Multi-Liner™</span></li><li><code>309970280444</code><span class="prob-produto">Super Lustrous Glimmer™ Lip Oil</span></li><li><code>309979380466</code><span class="prob-produto">ColorStay Overtime™ Lipcolor</span></li><li><code>309970184797</code><span class="prob-produto">ColorSilk™ with Bond Repair Complex Permanent Hair Dye</span></li><li><code>309970215811</code><span class="prob-produto">ColorStay Limitless Matte™ Liquid Lipstick</span></li><li><code>309970271343</code><span class="prob-produto">PhotoReady™ Instant Plump Serum</span></li><li><code>309971335020</code><span class="prob-produto">ColorStay Full Cover™ Foundation</span></li><li><code>309970289270</code><span class="prob-produto">Super Lustrous™ Glass Shine Balm</span></li><li><code>309970211738</code><span class="prob-produto">ColorStay Full Time™ Mascara</span></li><li><code>309979380084</code><span class="prob-produto">ColorStay Overtime™ Lipcolor</span></li><li><code>309970285487</code><span class="prob-produto">PhotoReady™ Instant Blur Liner</span></li><li><code>309975415100</code><span class="prob-produto">ColorStay™ Longwear Makeup SPF 20</span></li><li><code>309976734057</code><span class="prob-produto">ColorStay™ Eyeliner</span></li><li><code>309970289324</code><span class="prob-produto">Super Lustrous™ Glass Shine Balm</span></li><li><code>309975316735</code><span class="prob-produto">ColorStay Overtime™ Lipcolor</span></li><li><code>309970223731</code><span class="prob-produto">Illuminance™ Gel Serum Blush</span></li><li><code>309970184674</code><span class="prob-produto">ColorSilk™ with Bond Repair Complex Permanent Hair Dye</span></li><li><code>309970117108</code><span class="prob-produto">ColorStay Satin Ink Liquid Lipstick™</span></li><li><code>309973157026</code><span class="prob-produto">PhotoReady™ Powder</span></li><li><code>309970174163</code><span class="prob-produto">Super Lustrous™ Glimmer Gloss</span></li><li><code>309970187200</code><span class="prob-produto">ColorStay Suede Ink™ Lipstick</span></li><li><code>309970054434</code><span class="prob-produto">Colorstay™ Pressed Powder</span></li><li><code>309970212667</code><span class="prob-produto">Super Lustrous™ Glimmer Gloss</span></li><li><code>309970275716</code><span class="prob-produto">ColorStay™ Face + Body Glow Lotion</span></li><li><code>309970175153</code><span class="prob-produto">ColorStay Matte Lite Crayon™ Lipstick</span></li><li><code>309970215866</code><span class="prob-produto">ColorStay Limitless Matte™ Liquid Lipstick</span></li><li><code>309978535010</code><span class="prob-produto">ColorStay Day to Night™ Eyeshadow Quad</span></li><li><code>309970275723</code><span class="prob-produto">ColorStay™ Face + Body Glow Lotion</span></li><li><code>309970187118</code><span class="prob-produto">ColorStay Suede Ink™ Lipstick</span></li><li><code>309977549032</code><span class="prob-produto">So Fierce!™ Mascara for Length and Volume</span></li><li><code>309971335082</code><span class="prob-produto">ColorStay Full Cover™ Foundation</span></li><li><code>309970275846</code><span class="prob-produto">Glimmer Brightening Concealer</span></li><li><code>309970089634</code><span class="prob-produto">Super Lustrous The Lip Gloss™</span></li><li><code>309970215750</code><span class="prob-produto">ColorStay Limitless Matte™ Liquid Lipstick</span></li><li><code>309970187095</code><span class="prob-produto">ColorStay Suede Ink™ Lipstick</span></li><li><code>309970270957</code><span class="prob-produto">Super Lustrous Glimmer™ Lip Oil</span></li><li><code>309970282424</code><span class="prob-produto">Glimmer Brightening Concealer</span></li><li><code>309970174507</code><span class="prob-produto">So Fierce! Eyes Wide Open™ Mascara</span></li><li><code>309970270971</code><span class="prob-produto">Super Lustrous Glimmer™ Lip Oil</span></li><li><code>309970285524</code><span class="prob-produto">PhotoReady™ Instant Blur Liner</span></li><li><code>309970188450</code><span class="prob-produto">ColorStay Micro™ Brow Pencil</span></li><li><code>309973212022</code><span class="prob-produto">PhotoReady™ Concealer Makeup</span></li><li><code>309978100041</code><span class="prob-produto">ColorStay™ Longwear Lip Liner</span></li><li><code>309970041175</code><span class="prob-produto">Super Lustrous The Lip Gloss™</span></li><li><code>309979380329</code><span class="prob-produto">ColorStay Overtime™ Lipcolor</span></li><li><code>309970184650</code><span class="prob-produto">ColorSilk™ with Bond Repair Complex Permanent Hair Dye</span></li><li><code>309970002473</code><span class="prob-produto">ColorStay™ Longwear Makeup SPF 20</span></li><li><code>309970188429</code><span class="prob-produto">ColorStay Micro™ Brow Pencil</span></li><li><code>309970215897</code><span class="prob-produto">ColorStay Limitless Matte™ Liquid Lipstick</span></li><li><code>309970175108</code><span class="prob-produto">ColorStay Matte Lite Crayon™ Lipstick</span></li><li><code>309975912043</code><span class="prob-produto">Illuminance™ Crème Eye Shadow Palette</span></li><li><code>309970054403</code><span class="prob-produto">Colorstay™ Pressed Powder</span></li><li><code>309979380268</code><span class="prob-produto">ColorStay Overtime™ Lipcolor</span></li><li><code>309970251932</code><span class="prob-produto">Super Lustrous™ Glass Shine Balm</span></li><li><code>309973174351</code><span class="prob-produto">ColorStay Ultimate™ Liquid Lipstick</span></li><li><code>309970213411</code><span class="prob-produto">ColorStay Flex Wear Full Cover™ Concealer</span></li><li><code>309974784030</code><span class="prob-produto">Powder Blush</span></li><li><code>309975415025</code><span class="prob-produto">ColorStay™ Longwear Makeup SPF 20</span></li><li><code>309970225278</code><span class="prob-produto">Illuminance™ Serum Tint</span></li><li><code>309970251901</code><span class="prob-produto">Super Lustrous™ Glass Shine Balm</span></li><li><code>309976734125</code><span class="prob-produto">ColorStay™ Eyeliner</span></li><li><code>309970002527</code><span class="prob-produto">ColorStay™ Longwear Makeup SPF 20</span></li><li><code>309970218270</code><span class="prob-produto">Colorsilk Digitones™ Hair Color</span></li><li><code>309970054410</code><span class="prob-produto">Colorstay™ Pressed Powder</span></li><li><code>309970251895</code><span class="prob-produto">Super Lustrous™ Glass Shine Balm</span></li><li><code>309970251970</code><span class="prob-produto">Super Lustrous™ Glass Shine Balm</span></li><li><code>309970175085</code><span class="prob-produto">ColorStay Matte Lite Crayon™ Lipstick</span></li><li><code>309970157319</code><span class="prob-produto">ColorStay Day to Night™ Eyeshadow Quad</span></li><li><code>309970234157</code><span class="prob-produto">ColorStay Multi-Liner™</span></li><li><code>309970282417</code><span class="prob-produto">Glimmer Brightening Concealer</span></li><li><code>309973212053</code><span class="prob-produto">PhotoReady™ Concealer Makeup</span></li><li><code>309970213466</code><span class="prob-produto">ColorStay Flex Wear Full Cover™ Concealer</span></li><li><code>309970213541</code><span class="prob-produto">ColorStay Flex Wear Full Cover™ Concealer</span></li><li><code>309970275792</code><span class="prob-produto">Glimmer Blush Drops</span></li><li><code>309970184742</code><span class="prob-produto">ColorSilk™ with Bond Repair Complex Permanent Hair Dye</span></li><li><code>309970225247</code><span class="prob-produto">Illuminance™ Serum Tint</span></li><li><code>309970187040</code><span class="prob-produto">ColorStay Suede Ink™ Lipstick</span></li><li><code>309970289256</code><span class="prob-produto">Super Lustrous™ Glass Shine Balm</span></li><li><code>309970002497</code><span class="prob-produto">ColorStay™ Longwear Makeup SPF 20</span></li><li><code>309973174023</code><span class="prob-produto">ColorStay Ultimate™ Liquid Lipstick</span></li><li><code>309970271442</code><span class="prob-produto">PhotoReady™ Instant Plump Serum</span></li><li><code>309970174781</code><span class="prob-produto">ColorStay™ Semi-Permanent Brow Ink</span></li></ul></div></div></div></details></td>
+  </tr>
+  <tr>
+    <td class="col-rank">#6</td>
+    <td class="col-nome"><strong>Maria Geane Silva Cardoso</strong></td>
+    <td class="col-erros"><span class="val-ruim erros-badge">92</span></td>
+    <td class="col-num">114</td>
+    <td class="col-num">11</td>
+    <td class="col-num">28</td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-num">75</td>
+    <td class="col-vazao"><span class="col-vazao-val" title="7.7 dias corridos">14.8</span></td>
+    <td class="col-ev"><span class="val-ruim">53/114</span></td>
+  </tr>
+  <tr class="row-details-wrap">
+    <td></td>
+    <td colspan="9"><details class="row-details"><summary class="det-summary">detalhes · 92 problemas</summary><div class="det-body"><div class="det-secao"><span class="det-label">marcas</span><span class="det-marcas">RISQUÉ, Risqué, ROCHAS, Ruby Kisses, RUBY KISSES</span></div><div class="det-secao"><span class="det-label prob-label-ruim">sem resultado (75)</span><div class="prob-grupo"><span class="prob-grupo-marca">RISQUÉ</span><ul class="prob-list"><li><code>7891182019996</code><span class="prob-produto">Esmalte Risqué Vermelho Cremoso Escarlate 8ml</span></li><li><code>7891350041200</code><span class="prob-produto">Top Coat Fixador Efeito Cristal Risqué Diamond Gel 9,5ml</span></li><li><code>7891182820028</code><span class="prob-produto">Esmalte Risqué Branco Natural Renda 8ml</span></li><li><code>7891350040524</code><span class="prob-produto">Esmalte Risqué Roxo Sem Crise Cremoso 8ml</span></li><li><code>7891350046090</code><span class="prob-produto">Esmalte Verde Água Risqué & Chilli Beans Verdelírio Efeito 8ml</span></li><li><code>7891350041217</code><span class="prob-produto">Top Coat Fixador Efeito Paetê Risqué Diamond Gel 9,5ml</span></li><li><code>7891350038316</code><span class="prob-produto">Esmalte Risqué Rosa Cremoso Chik Pop 8ml</span></li><li><code>7891350040494</code><span class="prob-produto">Esmalte Risqué Se Solta no Blues Cremoso 8ml</span></li><li><code>7891182035941</code><span class="prob-produto">Esmalte Risqué Branco Natural Rendinha 8ml</span></li><li><code>7891350034066</code><span class="prob-produto">Esmalte Risqué Verde Cremoso Ver De Verdade 8ml</span></li><li><code>7891350040401</code><span class="prob-produto">Esmalte Risqué Livre para Brilhar Azul Metálico Já Acordo Divando 8ml</span></li><li><code>7891182014601</code><span class="prob-produto">Esmalte Risqué Vermelho Metálico Maçã do Amor 8ml</span></li><li><code>7891350040500</code><span class="prob-produto">Esmalte Risqué Look do Dia: Good Vibes Cremoso 8ml</span></li><li><code>7891350040487</code><span class="prob-produto">Esmalte Risqué A.mar Cremoso 8ml</span></li><li><code>7891182016933</code><span class="prob-produto">Esmalte Risqué Vermelho Cremoso Carmim 8ml</span></li><li><code>7891182996310</code><span class="prob-produto">Esmalte Risqué Roxo Cremoso Turmalina 8ml</span></li><li><code>7891182830010</code><span class="prob-produto">Esmalte Risqué Branco Cintilante Platino 8ml</span></li><li><code>7891182032353</code><span class="prob-produto">Esmalte Risqué Vermelho Cremoso Beijo 8ml</span></li><li><code>7891182040020</code><span class="prob-produto">Seda Base Risqué Care 8ml</span></li><li><code>7891182996341</code><span class="prob-produto">Esmalte Risqué Nude Cremoso Cappuccino 8ml</span></li><li><code>7891350037135</code><span class="prob-produto">Esmalte Risqué Diamond Gel Vermelho Rubi Cremoso 9,5ml</span></li><li><code>7891350037487</code><span class="prob-produto">Sérum Hidratante Risqué Care 8ml</span></li><li><code>7891350038323</code><span class="prob-produto">Esmalte Risqué Vinho Cremoso De Moletom e Salto 8ml</span></li><li><code>7891182023115</code><span class="prob-produto">Base Fortalecedora Risqué Care 8ml</span></li><li><code>7891350042948</code><span class="prob-produto">Esmalte Rosa Risqué Chiclete, Me Esquece Cintilante 8ml</span></li><li><code>7891350037128</code><span class="prob-produto">Esmalte Risqué Diamond Gel Vermelho Cereja Cremoso 9,5ml</span></li><li><code>7891350048230</code><span class="prob-produto">Esmalte Preto Efeito Risqué & Lollapalooza Brasil Atração Principal 8ml</span></li><li><code>7891350048162</code><span class="prob-produto">Esmalte Rosa Efeito Risqué & Lollapalooza Brasil Colorindo Meu Line Up 8ml</span></li><li><code>7891350048179</code><span class="prob-produto">Esmalte Verde Efeito Risqué & Lollapalooza Brasil Vou Para Verde Perto 8ml</span></li><li><code>7891350048209</code><span class="prob-produto">Esmalte Azul Escuro Metálico Risqué & Lollapalooza Brasil Não Esquece a Jaqueta 8ml</span></li><li><code>7891350048599</code><span class="prob-produto">Esmalte Verde Risqué Bridgerton Cortejo no Jardim Cremoso 8ml</span></li><li><code>7891350037173</code><span class="prob-produto">Esmalte Risqué Diamond Gel Preto Caviar Cremoso 9,5ml</span></li><li><code>7891350048582</code><span class="prob-produto">Esmalte Rosa Risqué Bridgerton Sociedade da Fofoca Cremoso 8ml</span></li><li><code>7891350037012</code><span class="prob-produto">Esmalte Risqué Diamond Gel Branco Camafeu Cremoso 9,5ml</span></li><li><code>7891350045284</code><span class="prob-produto">Esmalte Azul Risqué ManiCores Esmalterapia Cintilante 8ml</span></li><li><code>7891350048193</code><span class="prob-produto">Esmalte Roxo Efeito Risqué & Lollapalooza Brasil Foto no Lambe Lambe 8ml</span></li><li><code>7891182994088</code><span class="prob-produto">Esmalte Risqué Nude Metálico Ouro Nude 8ml</span></li><li><code>7891350048155</code><span class="prob-produto">Esmalte Coral Metálico Risqué & Lollapalooza Brasil Pôr do Show 8ml</span></li><li><code>7891350038552</code><span class="prob-produto">Esmalte Risqué Diamond Gel Gin & Sunset Cremoso 9,5ml</span></li><li><code>7891182014878</code><span class="prob-produto">Esmalte Risqué Nude Cremoso Lágrimas de Vênus 8ml</span></li><li><code>7891350038057</code><span class="prob-produto">Esmalte Verde Risqué Inspiração Divina Cremoso 8ml - Esmalte Verde Risqué Inspiração Divina Cremoso 8ml</span></li><li><code>7891350041873</code><span class="prob-produto">Esmalte Azul Risqué Hoje Sim, Amanhã Talvez Metálico 8ml</span></li><li><code>7891350046168</code><span class="prob-produto">Esmalte Vermelho Risqué & Chilli Beans Para Te Vermelhor Metálico 8ml</span></li><li><code>7891350047783</code><span class="prob-produto">Esmalte Azul Risqué Diamond Gel Noite Estrelada Cremoso 9,5 ml</span></li><li><code>7891350047776</code><span class="prob-produto">Esmalte Roxo Risqué Diamond Macaron de Amora Cremoso 9,5 ml</span></li><li><code>7891350043785</code><span class="prob-produto">Esmalte Vermelho Risqué Diamond Gel Charlotte de Romã Metálico 9,5 ml</span></li><li><code>7891350043815</code><span class="prob-produto">Esmalte Lilás Risqué Diamond Gel Buquê de Hortênsias Cremoso 9,5 ml</span></li><li><code>7891350037104</code><span class="prob-produto">Esmalte Risqué Diamond Gel Creme De Pitaya Rosa Cremoso 9,5ml</span></li><li><code>7891182050142</code><span class="prob-produto">Removedor de Esmaltes Risqué Care 100ml</span></li><li><code>7891182810203</code><span class="prob-produto">Esmalte Risqué Vermelho Cremoso Gabriela 8ml</span></li><li><code>7891182014816</code><span class="prob-produto">Esmalte Risqué Nude Metálico Gota dos Anjos 8ml</span></li><li><code>7891350038330</code><span class="prob-produto">Esmalte Risqué Preto Cremoso Eu Sou Esse Glamour Todo 8ml</span></li><li><code>7891350040531</code><span class="prob-produto">Esmalte Risqué Menta.liza Cremoso 8ml</span></li><li><code>7891350037036</code><span class="prob-produto">Esmalte Risqué Diamond Gel Sal Rosa Cremoso 9,5ml</span></li><li><code>7891350034073</code><span class="prob-produto">Esmalte Risqué Roxo Cremoso Lavanda Alma 8ml</span></li><li><code>7891350042184</code><span class="prob-produto">Esmalte Verde Risqué Bridgerton Uma Abelha me Contou... Metálico 8ml</span></li><li><code>7891182830119</code><span class="prob-produto">Esmalte Risqué Branco Cintilante Cristal 8ml</span></li><li><code>7891182996495</code><span class="prob-produto">Esmalte Risqué Rosa Cremoso Malícia 8ml</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">ROCHAS</span><ul class="prob-list"><li><code>3386460124256</code><span class="prob-produto">perfume rochas girl feminino eau de toilette</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">RUBY KISSES</span><ul class="prob-list"><li><code>731509971330</code><span class="prob-produto">Pump Primer Minimizador de Poros - Ruby Kisses</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">Risqué</span><ul class="prob-list"><li><code>7891182018715</code><span class="prob-produto">Esmalte Risqué Rosa Cintilante Mini Saia 8ml</span></li><li><code>7891350042740</code><span class="prob-produto">Esmalte Azul Risqué Diamond Gel Divas No Poder Look Fashionista Cremoso 9,5ml</span></li><li><code>7891350037050</code><span class="prob-produto">Esmalte Risqué Diamond Gel Espumante Rosé Cremoso 9,5ml</span></li><li><code>7891182015127</code><span class="prob-produto">Esmalte Risqué Roxo Cremoso Ninfa 8ml</span></li><li><code>7891350043044</code><span class="prob-produto">Esmalte Roxo Risqué & Doritos Roxo de Fome Metálico 8ml</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">Ruby Kisses</span><ul class="prob-list"><li><code>7898741802983</code><span class="prob-produto">Caneta Delineadora Intense 24h - Ruby Kisses</span></li><li><code>7898741802419</code><span class="prob-produto">Lip Oil Jelly Pop! - Ruby Kisses</span></li><li><code>7898741805144</code><span class="prob-produto">Lip Balm So Jelly - Ruby Kisses</span></li><li><code>731509716320</code><span class="prob-produto">Delineador em Gel Intense 24h Preto Blackout - Ruby Kisses</span></li><li><code>731509687316</code><span class="prob-produto">Lápis de Olho Retrátil - Ruby Kisses</span></li><li><code>731509994698</code><span class="prob-produto">Mini Paleta de Contorno - Ruby Kisses</span></li><li><code>731509971231</code><span class="prob-produto">Gloss Volume Big & Full - Ruby Kisses</span></li><li><code>731509972719</code><span class="prob-produto">Bronzer Tropicoco - Ruby Kisses</span></li><li><code>731509997576</code><span class="prob-produto">Butter Bomb Gloss - Ruby Kisses</span></li><li><code>731509966527</code><span class="prob-produto">Primer Maquiagem HD Retoque Nunca Mais Adeus Poros - Ruby Kisses</span></li></ul></div></div><div class="det-secao"><span class="det-label prob-label-alerta">na planilha sem pasta no Drive (17)</span><div class="prob-grupo"><span class="prob-grupo-marca">RISQUÉ</span><ul class="prob-list"><li><code>7891182032377</code><span class="prob-produto">Esmalte Risqué Vermelho Cremoso Love 8ml</span></li><li><code>7891350038293</code><span class="prob-produto">Esmalte Risqué Verde Militar Cremoso Guerreira do Arco-íris 8ml</span></li><li><code>7891350039337</code><span class="prob-produto">Secante Express Risqué Care 8ml</span></li><li><code>7891182810098</code><span class="prob-produto">Esmalte Risqué Rosa Cremoso Astral 8ml</span></li><li><code>7891182996501</code><span class="prob-produto">Esmalte Risqué Nude Cremoso Bali 8ml</span></li><li><code>7891182036795</code><span class="prob-produto">Esmalte Risqué Vermelho Cremoso Doce Orgulho 8ml</span></li><li><code>7891182810012</code><span class="prob-produto">Esmalte Risqué Branco Cremoso Bianco Puríssimo 8ml</span></li><li><code>7891350046137</code><span class="prob-produto">Esmalte Laranja Risqué & Chilli Beans Verdadeira Camaleoa Efeito 8ml</span></li><li><code>7891350037159</code><span class="prob-produto">Esmalte Risqué Diamond Gel Amora Negra Cremoso 9,5ml</span></li><li><code>7891182030915</code><span class="prob-produto">Esmalte Risqué Vermelho Cremoso Desejo 8ml</span></li><li><code>7891182830126</code><span class="prob-produto">Esmalte Risqué Vermelho Metálico Rubi 8ml</span></li><li><code>7891350045239</code><span class="prob-produto">Esmalte Rosa Risqué ManiCores Faço Pinx em Casa Cremoso 8ml</span></li><li><code>7891350037142</code><span class="prob-produto">Esmalte Risqué Diamond Gel Vinho Bordô Cremoso 9,5ml</span></li><li><code>7891182820011</code><span class="prob-produto">Esmalte Risqué Incolor 8ml</span></li><li><code>7891350037067</code><span class="prob-produto">Esmalte Risqué Diamond Gel Lavanda Francesa Cremoso 9,5ml</span></li><li><code>7891182031363</code><span class="prob-produto">Esmalte Risqué Rosa Cremoso Energia 8ml</span></li></ul></div><div class="prob-grupo"><span class="prob-grupo-marca">Ruby Kisses</span><ul class="prob-list"><li><code>731509966565</code><span class="prob-produto">Bruma Fixadora Retoque Nunca Mais - Ruby Kisses</span></li></ul></div></div></div></details></td>
+  </tr>
+  <tr>
+    <td class="col-rank">#7</td>
+    <td class="col-nome"><strong>Darlan Leal Santos</strong></td>
+    <td class="col-erros"><span class="val-ruim erros-badge">4</span></td>
+    <td class="col-num">111</td>
+    <td class="col-num">25</td>
+    <td class="col-num">86</td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-vazao"><span class="col-vazao-val" title="3.5 dias corridos">31.4</span></td>
+    <td class="col-ev"><span class="val-ok">111/111</span></td>
+  </tr>
+  <tr class="row-details-wrap">
+    <td></td>
+    <td colspan="9"><details class="row-details"><summary class="det-summary">detalhes · 4 problemas</summary><div class="det-body"><div class="det-secao"><span class="det-label">marcas</span><span class="det-marcas">Sephora</span></div><div class="det-secao"><span class="det-label prob-label-alerta">na planilha sem pasta no Drive (3)</span><div class="prob-grupo"><span class="prob-grupo-marca">Sephora</span><ul class="prob-list"><li><code>798190193823</code><span class="prob-produto">delineador adesivo that girl preto vazado nathalie billio</span></li><li><code>736532216229</code><span class="prob-produto">lápis de delineador larissa manoela by océane colorful eyeliner</span></li><li><code>20714192358</code><span class="prob-produto">Máscara de Cílios Clinique High Impact Black Honey</span></li></ul></div></div><div class="det-secao"><span class="det-label prob-label-ruim">EAN suspeito (1)</span><div class="prob-grupo"><span class="prob-grupo-marca">Sephora</span><ul class="prob-list"><li><code>20714192358</code><span class="prob-produto">Máscara de Cílios Clinique High Impact Black Honey</span><span class="prob-valor">→ 11 dígitos (esperado 8, 12, 13 ou 14)</span></li></ul></div></div></div></details></td>
+  </tr>
+  <tr>
+    <td class="col-rank">#8</td>
+    <td class="col-nome"><strong>Bruno Felipe Corte</strong></td>
+    <td class="col-erros"><span class="val-nd">—</span></td>
+    <td class="col-num">100</td>
+    <td class="col-num">52</td>
+    <td class="col-num">48</td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-vazao"><span class="col-vazao-val" title="3.5 dias corridos">28.3</span></td>
+    <td class="col-ev"><span class="val-ok">100/100</span></td>
+  </tr>
+  <tr class="row-details-wrap">
+    <td></td>
+    <td colspan="9"><details class="row-details"><summary class="det-summary">detalhes</summary><div class="det-body"><div class="det-secao"><span class="det-label">marcas</span><span class="det-marcas">Boticario, Felps, Shiseido</span></div></div></details></td>
+  </tr>
+  <tr>
+    <td class="col-rank">#9</td>
+    <td class="col-nome"><strong>Ana Paula Soares Oliveira</strong></td>
+    <td class="col-erros"><span class="val-ruim erros-badge">20</span></td>
+    <td class="col-num">93</td>
+    <td class="col-num">10</td>
+    <td class="col-num">83</td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-vazao"><span class="col-vazao-val" title="3.5 dias corridos">26.3</span></td>
+    <td class="col-ev"><span class="val-ok">93/93</span></td>
+  </tr>
+  <tr class="row-details-wrap">
+    <td></td>
+    <td colspan="9"><details class="row-details"><summary class="det-summary">detalhes · 20 problemas</summary><div class="det-body"><div class="det-secao"><span class="det-label">marcas</span><span class="det-marcas">Mari Maria Makeup</span></div><div class="det-secao"><span class="det-label prob-label-ruim">EAN suspeito (20)</span><div class="prob-grupo"><span class="prob-grupo-marca">Mari Maria Makeup</span><ul class="prob-list"><li><code>441</code><span class="prob-produto">Base Cover Up - MM30O</span><span class="prob-valor">→ apenas 3 dígito(s)</span></li><li><code>417</code><span class="prob-produto">Base Cover Up - MM06N</span><span class="prob-valor">→ apenas 3 dígito(s)</span></li><li><code>641</code><span class="prob-produto">Base e Corretivo Velvet Skin - Bege Claro 2</span><span class="prob-valor">→ apenas 3 dígito(s)</span></li><li><code>721</code><span class="prob-produto">Base Hype Up - Verde</span><span class="prob-valor">→ apenas 3 dígito(s)</span></li><li><code>713</code><span class="prob-produto">Base Hype Up - H8</span><span class="prob-valor">→ apenas 3 dígito(s)</span></li><li><code>719</code><span class="prob-produto">Base Hype Up - Azul</span><span class="prob-valor">→ apenas 3 dígito(s)</span></li><li><code>686</code><span class="prob-produto">Base Hype Up - H1</span><span class="prob-valor">→ apenas 3 dígito(s)</span></li><li><code>716</code><span class="prob-produto">Base Hype Up - H11</span><span class="prob-valor">→ apenas 3 dígito(s)</span></li><li><code>707</code><span class="prob-produto">Base Hype Up - H2</span><span class="prob-valor">→ apenas 3 dígito(s)</span></li><li><code>714</code><span class="prob-produto">Base Hype Up - H9</span><span class="prob-valor">→ apenas 3 dígito(s)</span></li><li><code>711</code><span class="prob-produto">Base Hype Up - H6</span><span class="prob-valor">→ apenas 3 dígito(s)</span></li><li><code>725</code><span class="prob-produto">Lip Candy - Doce de Leite</span><span class="prob-valor">→ apenas 3 dígito(s)</span></li><li><code>710</code><span class="prob-produto">Base Hype Up - H5</span><span class="prob-valor">→ apenas 3 dígito(s)</span></li><li><code>727</code><span class="prob-produto">Lip Candy - Brigadeiro</span><span class="prob-valor">→ apenas 3 dígito(s)</span></li><li><code>722</code><span class="prob-produto">Base Hype Up - Amarelo</span><span class="prob-valor">→ apenas 3 dígito(s)</span></li><li><code>708</code><span class="prob-produto">Base Hype Up - H3</span><span class="prob-valor">→ apenas 3 dígito(s)</span></li><li><code>726</code><span class="prob-produto">Lip Candy - Goiabada</span><span class="prob-valor">→ apenas 3 dígito(s)</span></li><li><code>720</code><span class="prob-produto">Base Hype Up - Vermelho</span><span class="prob-valor">→ apenas 3 dígito(s)</span></li><li><code>718</code><span class="prob-produto">Base Hype Up - Preto</span><span class="prob-valor">→ apenas 3 dígito(s)</span></li><li><code>709</code><span class="prob-produto">Base Hype Up - H4</span><span class="prob-valor">→ apenas 3 dígito(s)</span></li></ul></div></div></div></details></td>
+  </tr>
+  <tr>
+    <td class="col-rank">#10</td>
+    <td class="col-nome"><strong>Rayana Araujo Silva</strong></td>
+    <td class="col-erros"><span class="val-ruim erros-badge">4</span></td>
+    <td class="col-num">84</td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-num">80</td>
+    <td class="col-num">4</td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-vazao"><span class="col-vazao-val" title="7.7 dias corridos">10.9</span></td>
+    <td class="col-ev"><span class="val-alerta">80/84</span></td>
+  </tr>
+  <tr class="row-details-wrap">
+    <td></td>
+    <td colspan="9"><details class="row-details"><summary class="det-summary">detalhes · 4 problemas</summary><div class="det-body"><div class="det-secao"><span class="det-label">marcas</span><span class="det-marcas">Lacoste, Lancôme, Leite de Colônia, Listerine, Lola Cosmetics</span></div><div class="det-secao"><span class="det-label prob-label-alerta">evidência com problema (4)</span><div class="prob-grupo"><span class="prob-grupo-marca">LOLA COSMETICS</span><ul class="prob-list"><li><code>7899572802272</code><span class="prob-valor">screenshots/ vazia</span></li><li><code>7899572802296</code><span class="prob-valor">screenshots/ vazia</span></li><li><code>7899572812042</code><span class="prob-valor">screenshots/ vazia</span></li><li><code>7899572812271</code><span class="prob-valor">screenshots/ vazia</span></li></ul></div></div></div></details></td>
+  </tr>
+  <tr>
+    <td class="col-rank">#11</td>
+    <td class="col-nome"><strong>Geilson Soares</strong></td>
+    <td class="col-erros"><span class="val-nd">—</span></td>
+    <td class="col-num">74</td>
+    <td class="col-num">17</td>
+    <td class="col-num">57</td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-vazao"><span class="col-vazao-val" title="3.5 dias corridos">21.0</span></td>
+    <td class="col-ev"><span class="val-alerta">75/74</span></td>
+  </tr>
+  <tr class="row-details-wrap">
+    <td></td>
+    <td colspan="9"><details class="row-details"><summary class="det-summary">detalhes</summary><div class="det-body"><div class="det-secao"><span class="det-label">marcas</span><span class="det-marcas">Volt</span></div></div></details></td>
+  </tr>
+  <tr>
+    <td class="col-rank">#12</td>
+    <td class="col-nome"><strong>Sherle Daniele</strong></td>
+    <td class="col-erros"><span class="val-ruim erros-badge">2</span></td>
+    <td class="col-num">73</td>
+    <td class="col-num">46</td>
+    <td class="col-num">27</td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-vazao"><span class="col-vazao-val" title="3.5 dias corridos">20.7</span></td>
+    <td class="col-ev"><span class="val-alerta">72/73</span></td>
+  </tr>
+  <tr class="row-details-wrap">
+    <td></td>
+    <td colspan="9"><details class="row-details"><summary class="det-summary">detalhes · 2 problemas</summary><div class="det-body"><div class="det-secao"><span class="det-label">marcas</span><span class="det-marcas">Granado</span></div><div class="det-secao"><span class="det-label prob-label-alerta">na planilha sem pasta no Drive (2)</span><div class="prob-grupo"><span class="prob-grupo-marca">Granado</span><ul class="prob-list"><li><code>789651291858</code><span class="prob-produto">Sabonete em Barra de Glicerina Granado Bebê Lavanda Rosa 90g</span></li><li><code>7896512968739</code><span class="prob-produto">Lenços Umedecidos Bebê Calêndula</span></li></ul></div></div></div></details></td>
+  </tr>
+  <tr>
+    <td class="col-rank">#13</td>
+    <td class="col-nome"><strong>Marcia Tolentino</strong></td>
+    <td class="col-erros"><span class="val-ruim erros-badge">4</span></td>
+    <td class="col-num">48</td>
+    <td class="col-num">2</td>
+    <td class="col-num">46</td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-vazao"><span class="col-vazao-val" title="3.5 dias corridos">13.6</span></td>
+    <td class="col-ev"><span class="val-ok">48/48</span></td>
+  </tr>
+  <tr class="row-details-wrap">
+    <td></td>
+    <td colspan="9"><details class="row-details"><summary class="det-summary">detalhes · 4 problemas</summary><div class="det-body"><div class="det-secao"><span class="det-label">marcas</span><span class="det-marcas">Adcos</span></div><div class="det-secao"><span class="det-label prob-label-alerta">na planilha sem pasta no Drive (4)</span><div class="prob-grupo"><span class="prob-grupo-marca">Adcos</span><ul class="prob-list"><li><code>7897975699819</code><span class="prob-produto">Retinal Intensivo - 30g</span></li><li><code>7897975699871</code><span class="prob-produto">Collagen Reparador Intensivo Noturno - 50g</span></li><li><code>7897975698997</code><span class="prob-produto">Máscara Rejuvenescedora Labial - 10g</span></li><li><code>7897975697006</code><span class="prob-produto">Acne Solution Loção Secativa FPS 30 Tonalizante - 50ml</span></li></ul></div></div></div></details></td>
+  </tr>
+  <tr>
+    <td class="col-rank">#14</td>
+    <td class="col-nome"><strong>Eduardo Faria</strong></td>
+    <td class="col-erros"><span class="val-nd">—</span></td>
+    <td class="col-num">24</td>
+    <td class="col-num">17</td>
+    <td class="col-num">7</td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-vazao"><span class="col-vazao-val" title="3.5 dias corridos">6.8</span></td>
+    <td class="col-ev"><span class="val-ok">24/24</span></td>
+  </tr>
+  <tr class="row-details-wrap">
+    <td></td>
+    <td colspan="9"><details class="row-details"><summary class="det-summary">detalhes</summary><div class="det-body"><div class="det-secao"><span class="det-label">marcas</span><span class="det-marcas">Embelleze</span></div></div></details></td>
+  </tr>
+  <tr>
+    <td class="col-rank">#15</td>
+    <td class="col-nome"><strong>Lorrane Fernandes</strong></td>
+    <td class="col-erros"><span class="val-nd">—</span></td>
+    <td class="col-num">8</td>
+    <td class="col-num">4</td>
+    <td class="col-num">4</td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-vazao"><span class="col-vazao-val" title="3.5 dias corridos">2.3</span></td>
+    <td class="col-ev"><span class="val-ok">8/8</span></td>
+  </tr>
+  <tr class="row-details-wrap">
+    <td></td>
+    <td colspan="9"><details class="row-details"><summary class="det-summary">detalhes</summary><div class="det-body"><div class="det-secao"><span class="det-label">marcas</span><span class="det-marcas">Eudora</span></div></div></details></td>
+  </tr>
+  <tr>
+    <td class="col-rank">#16</td>
+    <td class="col-nome"><strong>Paulo Santini</strong></td>
+    <td class="col-erros"><span class="val-nd">—</span></td>
+    <td class="col-num"><span class="val-ruim">0</span></td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-num"><span class="val-nd">—</span></td>
+    <td class="col-vazao"><span class="val-nd">—</span></td>
+    <td class="col-ev"><span class="val-nd">—</span></td>
+  </tr>
+  <tr class="row-total">
+    <td class="col-rank"></td>
+    <td class="col-nome"><strong>Total</strong></td>
+    <td class="col-erros">—</td>
+    <td class="col-num"><strong>2044</strong></td>
+    <td class="col-num"><strong>436</strong></td>
+    <td class="col-num"><strong>1254</strong></td>
+    <td class="col-num"><strong>75</strong></td>
+    <td class="col-num"><strong>279</strong></td>
+    <td class="col-vazao">—</td>
+    <td class="col-ev"><span class="val-alerta"><strong>1774/2044</strong></span></td>
+  </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="criterio-box">
+      <strong>Critérios de validação</strong>
+      <p class="criterio-sub">Planilha</p>
+      <ol>
+        <li>Resultado preenchido para cada produto (<code>Aprovado</code>, <code>Aprovado em lote</code>, <code>Enviado para revisão</code> ou <code>Já estava revisado</code>)</li>
+        <li>Resultado dentro das opções válidas — qualquer outro valor é considerado inválido</li>
+        <li>EAN com formato correto: 8, 12, 13 ou 14 dígitos numéricos, sem sequências óbvias de placeholder</li>
+      </ol>
+      <p class="criterio-sub">Evidências no Drive</p>
+      <ol>
+        <li>Pasta de EAN dentro da pasta da marca correspondente em <code>evidencias/</code></li>
+        <li>EANs com resultado na planilha devem ter pasta no Drive</li>
+        <li>Subpasta <code>screenshots</code> dentro da pasta do EAN — <strong>ou</strong> arquivo de vídeo (<code>[EAN].mp4</code>) direto na pasta do EAN</li>
+        <li>Ao menos 1 arquivo de evidência dentro de <code>screenshots</code></li>
+        <li>Screenshots ordenáveis: nomes começando com dígito, mtimes distintos entre si, ou nomes descritivos (≥ 4 letras)</li>
+      </ol>
+    </div>
+
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="shell-wide row">
+    <a href="https://baselabs.com.br/" aria-label="BASE/labs">
+      <img src="https://propostas.baselabs.com.br/beclean/logo-azul.webp" alt="BASE/labs">
+    </a>
+    <div class="legal">
+      <span>© 2026 BASE/labs · uso interno</span>
+      <a href="mailto:hbarros@baselabs.com.br">hbarros@baselabs.com.br</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

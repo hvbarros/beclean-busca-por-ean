@@ -45,11 +45,12 @@ Este documento detalha o passo a passo dessa tarefa, a estrutura de entrega das 
 
 - **Acesso ao Hub:** `https://hub.beclean.com.br/` — login com e-mail e senha individual fornecidos pela BeClean
 - **Trabalho por marca:** nunca há dois workers na mesma marca. As marcas atribuídas são enviadas pelo gestor de contratos via WhatsApp ou e-mail — podendo receber uma ou mais marcas de uma vez. Ao concluir, avisar o gestor para receber o próximo lote
-- **Evidências obrigatórias:** screenshots de todas as telas conferidas, salvos na pasta do EAN correspondente, no Drive
+- **Evidências obrigatórias:** screenshots de todas as telas conferidas, salvos na pasta do EAN correspondente, no Drive. Como alternativa, é aceito um único arquivo de gravação de tela (vídeo) por EAN, salvo na pasta do EAN correspondente
 - **Comunicação:** dúvidas pontuais vão para o grupo de WhatsApp (ver "Canal de dúvidas"); dúvidas conceituais sobre produtos/categorias podem ser anotadas na coluna "Observações" da planilha
 - **Não criar motivos novos de revisão:** usar apenas os motivos já existentes no Hub. Texto livre adicional vai no campo de observação do produto
 - **Padrão de qualidade:** melhor enviar para revisão em caso de dúvida do que aprovar incorretamente
 - **Screenshots:** no Windows, use a ferramenta de Recorte (`Win + Shift + S`), o Snipping Tool, o atalho `Print Screen` ou o [Greenshot](https://getgreenshot.org/) (gratuito, recomendado). Salve sempre no formato `.png`.
+- **Gravação de tela (alternativa aos screenshots):** se preferir gravar a tela em vez de tirar screenshots, use o Xbox Game Bar (`Win + G`) ou o OBS Studio (gratuito). Salve um arquivo de vídeo por EAN (`[EAN].mp4`) diretamente na pasta do EAN — **não** dentro de `screenshots`. Use screenshots **ou** vídeo para cada EAN, não os dois.
 
 > **Atenção:** O trabalho deve ser feito em um **notebook ou desktop**. Não é possível executar as tarefas via celular — o Hub e o Google Drive precisam ser acessados em um navegador de computador.
 
@@ -62,9 +63,11 @@ Antes de iniciar a validação dos produtos, confirmar cada item abaixo:
 3. Confirmar a marca atribuída (enviada pelo gestor via WhatsApp ou e-mail)
 4. Dentro de `evidencias`, criar a pasta da marca (se ainda não existir)
 5. Abrir a planilha de controle e registrar o horário de início
-6. Aplicar os filtros no Hub conforme o Passo 2.2
-7. Tirar o screenshot inicial dos filtros aplicados
+6. Aplicar os filtros no Hub conforme o Passo 2
+7. Registrar a evidência inicial dos filtros aplicados (screenshot ou início da gravação de tela)
 8. Iniciar a validação do primeiro produto
+
+> **Evidências por EAN:** para cada produto, a evidência pode ser feita em **screenshots** (salvo na subpasta `screenshots` do EAN) **ou** em **vídeo** (arquivo `[EAN].mp4` na pasta do EAN) — escolha um formato por EAN, não os dois.
 
 ---
 
@@ -83,24 +86,35 @@ Cada worker terá uma pasta exclusiva dentro do Drive compartilhado da BASE/labs
             └── 📁 evidencias
                 └── 📁 [Marca]
                     └── 📁 [EAN]
-                        ├── 📁 screenshots
-                        └── 📄 observações.txt (opcional)
+                        ├── 📁 screenshots          ← opção A: pasta com screenshots
+                        │   └── 📄 passo3-01.png    (ou outros nomes ordenáveis)
+                        ├── 📄 observações.txt (opcional)
+                        └── 🎥 [EAN].mp4            ← opção B: vídeo direto na pasta do EAN
 ```
+
+> **Screenshots ou vídeo — escolha um por EAN.** Não é necessário (nem esperado) ter os dois para o mesmo produto.
 
 ### 4.2. Regras de nomenclatura
 
 - **Pasta do worker:** `[Nome Completo] — [AAAA-MM]`. Ex.: `Maria Silva — 2026-05`
 - **Pasta de marca:** nome da marca conforme aparece no Hub. Ex.: `Natura`
 - **Pasta de EAN:** o código EAN do produto. Ex.: `7891234567890`
-- **Screenshot:** `[Passo]-[NN].png`. Ex.: `passo3-01.png`
-- Não usar acentos, espaços no início/fim do nome, nem caracteres especiais (`/ \ : * ? " < > |`) nos nomes de arquivo
+- **Screenshot:** qualquer nome que permita ordenação é aceito. Formatos válidos:
+  - `[Passo]-[NN].png` — Ex.: `passo3-01.png` *(padrão recomendado)*
+  - `[NN].png` — Ex.: `01.png`, `02.png`
+  - Qualquer nome com prefixo numérico ou de data que garanta ordem alfabética correta — Ex.: `2026-05-22_01.png`
+  - Também é aceito confiar na **data de modificação do arquivo** para ordenação, desde que ela reflita a ordem real de captura (o que ocorre naturalmente ao tirar screenshots em sequência)
+  - Não usar acentos, espaços no início/fim do nome, nem caracteres especiais (`/ \ : * ? " < > |`) em nenhum nome de arquivo ou pasta
+- **Gravação de tela (alternativa exclusiva aos screenshots):** `[EAN].mp4` — o nome do arquivo deve ser o código EAN do produto. Ex.: `7891234567890.mp4`. Salvo **diretamente na pasta `[EAN]`**, não dentro de `screenshots`. Use screenshots **ou** vídeo para cada EAN — não os dois.
 
 ### 4.3. O que o worker deve fazer
 
 1. Acessar a pasta compartilhada que recebeu por e-mail/Drive
 2. Confirmar que enxerga sua planilha de controle e a subpasta `evidencias`
 3. Para cada produto, criar a pasta da marca (se ainda não existir) e dentro dela a pasta com o EAN do produto
-4. Salvar todos os screenshots dentro da subpasta `screenshots` dessa pasta de EAN
+4. Para cada EAN, salvar a evidência de **uma** das duas formas (não as duas):
+   - **Screenshots:** dentro da subpasta `screenshots` da pasta do EAN
+   - **Vídeo:** arquivo `[EAN].mp4` diretamente na pasta do EAN (ex.: `7891234567890.mp4`)
 5. Atualizar a planilha de controle ao final de cada produto conferido (ver seção 6)
 
 ### 4.4. O que o worker NÃO deve fazer
@@ -154,7 +168,7 @@ Cada worker recebe um **Google Sheets** próprio, copiado a partir de um templat
 - **Marca** — marca atribuída pelo gestor
 - **Produto** — nome do produto conforme aparece no Hub
 - **EAN** — código (quando aplicável)
-- **Resultado** — "Aprovado", "Enviado para revisão" ou "Aprovado em lote"
+- **Resultado** — "Aprovado", "Enviado para revisão", "Aprovado em lote" ou "Já estava revisado"
 - **Motivo de revisão** — preenchido apenas quando enviado para revisão
 - **Tempo gasto (min)** — estimativa
 - **Pasta de screenshots** — link da subpasta correspondente no Drive
@@ -183,24 +197,33 @@ Conferir produtos cosméticos importados via scraping (e eventualmente enriqueci
 
 Use esta lista como referência rápida durante a execução. Cada item corresponde a um passo detalhado nas seções seguintes.
 
-1. O link da loja abre e exibe o produto correto? → se não, **pular direto para o Passo 2.6** (não é necessário conferir os demais itens)
+1. O link da loja abre e exibe o produto correto? → se não, **pular direto para o Passo 6** (não é necessário conferir os demais itens)
 2. Conferir **todos** os itens abaixo, mesmo que algum falhe — anotar cada problema encontrado:
    - O nome corresponde ao mesmo produto?
    - A imagem está no padrão BeClean?
    - O EAN foi validado em fonte externa?
    - A categoria e subcategoria estão corretas? → corrigir no Hub se necessário
    - As três listas de ingredientes são equivalentes?
-3. Todos os itens aprovados? → clicar em "Aprovar Produto" e aguardar toast → **pular para o Passo 2.7**
-4. Algum item reprovado? → registrar todos os problemas na Observação e ir para o **Passo 2.6**
-5. Screenshot salvo na pasta do EAN?
+3. Todos os itens aprovados? → clicar em "Aprovar Produto" e aguardar toast → **pular para o Passo 7**
+4. Algum item reprovado? → registrar todos os problemas na Observação e ir para o **Passo 6**
+5. Evidências salvas? Escolha uma das duas formas:
+   - **Screenshots por produto** (padrão) — salvar na subpasta `screenshots` do EAN:
+     - **Passo 2** — filtros aplicados + contagem do lote *(uma vez por sessão)*
+     - **Passo 3** — link da loja aberto + ficha do produto no Hub
+     - **Passo 4** — um ou mais screenshots com: nome no Hub e no site; imagem do produto; resultado do EAN; categoria e subcategoria; três quadrantes de ingredientes + conclusão da IA
+     - **Passo 5** *(se aprovado)* — botão "Aprovar Produto" + toast "Produto pronto para produção"
+     - **Passo 6** *(se revisão)* — observação preenchida + motivo selecionado + toast "Produto marcado para revisão"
+   - **Gravação de tela** (alternativa exclusiva) — um único arquivo de vídeo por EAN (`[EAN].mp4`, ex.: `7891234567890.mp4`), salvo **diretamente na pasta `[EAN]`** (não em `screenshots`). Usar screenshots **ou** vídeo — não os dois.
 6. Planilha de controle atualizada?
 
-### 7.2. Passo 2 — Filtrar pré-aprovados de scraping
+### 7.3. Passo 2 — Filtrar pré-aprovados de scraping
+
+> **Evidência:** um único screenshot que mostre simultaneamente os filtros aplicados e o rodapé com a contagem total do lote — ou dois screenshots separados caso não seja possível capturar tudo em uma tela. Esta evidência é tirada **uma vez por sessão**, não por produto.
 
 - Ir para a aba **"Pré-Aprovados"**
 - Aplicar os filtros:
   - **Marca Original (Scraping):** marca de trabalho atribuída
-  - **Fonte (Origem):** Scrapping
+  - **Fonte (Origem):** Scrapping *(grafia do Hub — equivale a "scraping")*
   - **Enriquecimento por:** sem filtro de enriquecimento
   - **Categorizado por IA:** Todos
   - **Ordenar por Matching:** Maior Matching
@@ -208,23 +231,26 @@ Use esta lista como referência rápida durante a execução. Cada item correspo
 - A **quantidade total** de produtos do lote é exibida ao final da página — anotar esse número
 - Para iniciar a análise de um produto, clicar no botão **"Analisar"** na linha do produto
 
-> **Evidência:** um único screenshot que mostre simultaneamente os filtros aplicados e o rodapé com a contagem total do lote — ou dois screenshots separados caso não seja possível capturar tudo em uma tela.
-
 > *[ESPAÇO PARA SCREENSHOT 2.1: aba "Pré-Aprovados" com todos os filtros aplicados]*
 
 > *[ESPAÇO PARA SCREENSHOT 2.2: rodapé da listagem mostrando a quantidade total do lote]*
 
-### 7.3. Passo 3 — Abrir o link da loja {#sec-tarefa-1-link}
+### 7.4. Passo 3 — Abrir o link da loja {#sec-tarefa-1-link}
+
+> **Evidência:** um ou dois screenshots mostrando o link da loja aberto e a ficha do produto no Hub (podem ser capturas separadas ou lado a lado, desde que ambos estejam visíveis).
 
 Abrir o link da loja e usá-lo como referência principal para toda a conferência dos passos seguintes.
 
-Caso o link **não exista, não abra ou abra em uma página sem produto**, ainda assim **valide o EAN** (Passo 2.4.c) antes de encerrar a conferência do produto. Após validar o EAN, pular para o **Passo 2.5 — Envio para Revisão** e usar o motivo **"SITE"**.
+Caso o link **não exista, não abra ou abra em uma página sem produto**, ainda assim **valide o EAN** (item c do Passo 4) antes de encerrar a conferência do produto. Após validar o EAN, pular para o **Passo 6 — Envio para Revisão** e usar o motivo **"SITE"**.
 
-> *[ESPAÇO PARA SCREENSHOT 3.a: link da loja aberto + ficha do produto no Hub lado a lado]*
+> *[ESPAÇO PARA SCREENSHOT 3.a: link da loja aberto]*
 
-> **Evidência:** screenshot do link da loja aberto lado a lado com a ficha do produto no Hub.
+> *[ESPAÇO PARA SCREENSHOT 3.b: ficha do produto no Hub]*
 
-### 7.4. Passo 4 — Conferência item a item de cada produto
+### 7.5. Passo 4 — Conferência item a item de cada produto
+
+> **Evidência:** um ou mais screenshots por item, contendo as informações validadas. As capturas podem estar combinadas (vários itens na mesma tela) desde que todas as informações abaixo estejam visíveis em pelo menos uma captura:
+> nome do produto no Hub e no site da loja; imagem do produto na ficha do Hub; resultado da consulta do EAN; categoria e subcategoria preenchidas; os três quadrantes de ingredientes (Lista A, B e C) e a conclusão da IA.
 
 A ficha do produto traz os campos numerados na ordem de verificação. Seguir os itens em sequência, usando o link da loja aberto no passo anterior como referência.
 
@@ -236,15 +262,11 @@ Contamos com o seu senso crítico para distinguir variações de escrita do mesm
 
 > *[ESPAÇO PARA SCREENSHOT 4.a: comparação nome do Hub vs. nome no site da loja]*
 
-> **Evidência:** screenshot mostrando o nome no Hub e o nome no site da loja.
-
 #### b) Imagem {#item-4b}
 
 **Padrão BeClean:** produto com fundo branco ou cores claras. Enviar para Revisão fotos com pessoas de fundo, partes do corpo, propaganda ou qualquer elemento fora do padrão.
 
 > *[ESPAÇO PARA SCREENSHOT 4.b: área da imagem na ficha do produto]*
-
-> **Evidência:** screenshot da imagem do produto na ficha do Hub.
 
 #### c) EAN {#item-4c}
 
@@ -261,20 +283,17 @@ Consultar o EAN em **um** dos três sites de validação abaixo (uma validação
 - **EAN não encontrado em nenhuma fonte** → enviar para revisão; registrar na observação que o EAN não foi localizado nas fontes consultadas
 - **EAN aparece em mais de uma fonte com informações divergentes** → enviar para revisão; registrar as fontes e as divergências na observação
 
-> **Evidência:** screenshot do site de conferência com o resultado para o EAN consultado.
-
 #### d) Categoria e Subcategoria {#item-4d}
 
 Analisar a classificação atual usando o **[quadro padrão BeClean](/beclean/instrucoes_workers/categorias/)** (em caso de dúvida).
 
-- Havendo divergência, clicar em **"Editar categoria"**, selecionar a Categoria e a Subcategoria corretas e clicar em **"Salvar classificação"**
+- **Havendo divergência e certeza da classificação correta:** clicar em **"Editar categoria"**, selecionar a Categoria e a Subcategoria corretas e clicar em **"Salvar classificação"**
+- **Em caso de dúvida sobre a classificação correta:** não alterar — enviar para revisão com motivo **"Ajuste de Cate&Sub"** e registrar a dúvida na Observação
 - A lista de subcategorias é filtrada conforme a categoria selecionada
 
 > *[ESPAÇO PARA SCREENSHOT 4.d.1: campo de categoria/subcategoria]*
 
 > *[ESPAÇO PARA SCREENSHOT 4.d.2: filtro "Editar categoria" com nova classificação + botão "Salvar classificação"]*
-
-> **Evidência:** screenshot do campo de categoria/subcategoria preenchido. Se houver correção, screenshot também do estado após salvar.
 
 #### e) Avaliação de Ingredientes {#item-4e}
 
@@ -324,19 +343,19 @@ Lista C (Vinculados / DB — Hub):
 
 > *[ESPAÇO PARA SCREENSHOT 4.e.1: três quadrantes (Lista A, B e C) destacando o botão "copiar" de cada um]*
 
-> **Evidência:** screenshot dos três quadrantes de ingredientes e screenshot da conclusão da IA.
-
 > ⚠️ **Atenção — Perfume com fórmula aberta:** se o ingrediente "perfume" aparecer com sua composição detalhada (indicada por asteriscos, parênteses ou subitens com os componentes), **retire o "perfume" da lista** e considere apenas os componentes abertos individualmente. Envie o produto para revisão para que o ajuste seja feito no Hub.
 
 > ⚠️ **Atenção — "Pode conter" e "Não contém":** ignore menções de "pode conter" (referentes a alérgenos) e "não contém" (marketing de ingrediente livre) ao comparar as listas. Se qualquer uma das listas do Hub incluir esses termos como ingredientes, envie o produto para revisão para que sejam removidos da composição.
 
 > ℹ️ **Diferenças de idioma (português vs. INCI):** diferenças entre nomes em português e o padrão internacional INCI são tratadas automaticamente pelo sistema e **não devem ser consideradas divergência**. Ao usar a IA, oriente-a a focar na **equivalência química das substâncias**, não na grafia dos nomes.
 
-> **Aviso:** conferir **todos** os itens a–e antes de qualquer ação. Se um ou mais critérios falharem, registrar todos os problemas encontrados na Observação e ir para o **Passo 2.6 — Envio para Revisão**. Nunca interromper a conferência no meio porque um item falhou.
+> **Aviso:** conferir **todos** os itens a–e antes de qualquer ação. Se um ou mais critérios falharem, registrar todos os problemas encontrados na Observação e ir para o **Passo 6 — Envio para Revisão**. Nunca interromper a conferência no meio porque um item falhou.
 
-### 7.5. Passo 5 — Aprovar o produto {#sec-tarefa-1-aprovar}
+### 7.6. Passo 5 — Aprovar o produto {#sec-tarefa-1-aprovar}
 
-Se todos os itens do Passo 2.4 forem aprovados, concluir a validação:
+> **Evidência:** screenshot do botão "Aprovar Produto" e do toast de confirmação.
+
+Se todos os itens do Passo 4 forem aprovados, concluir a validação:
 
 - Clicar em **"Aprovar Produto"** (botão verde)
 - Aguardar a mensagem no canto da tela: **"Produto pronto para produção"**
@@ -345,13 +364,13 @@ Se todos os itens do Passo 2.4 forem aprovados, concluir a validação:
 
 > *[ESPAÇO PARA SCREENSHOT 5.2: toast de confirmação "Produto pronto para produção"]*
 
-> **Evidência:** screenshot do botão "Aprovar Produto" e do toast de confirmação.
+> **Aviso:** após a aprovação, pular direto para o **Passo 7 — Encerramento da jornada**.
 
-> **Aviso:** após a aprovação, pular direto para o **Passo 2.7 — Encerramento da jornada**.
+### 7.7. Passo 6 — Envio para Revisão
 
-### 7.6. Passo 6 — Envio para Revisão
+> **Evidência:** screenshots mostrando a observação preenchida com a conclusão da IA ou descrição do problema, o motivo da revisão selecionado e o toast "Produto marcado para revisão". Podem estar em capturas separadas ou combinadas.
 
-Usar este fluxo em dois casos: quando qualquer item do Passo 2.4 estiver fora de conformidade, **ou** quando o link da loja (Passo 2.3) não existir, não abrir ou abrir em uma página sem produto.
+Usar este fluxo em dois casos: quando qualquer item do Passo 4 estiver fora de conformidade, **ou** quando o link da loja (Passo 3) não existir, não abrir ou abrir em uma página sem produto.
 
 **1) Registrar a Observação**
 
@@ -378,23 +397,21 @@ Usar este fluxo em dois casos: quando qualquer item do Passo 2.4 estiver fora de
 - Clicar em **"Confirmar Revisão"**
 - Aguardar a mensagem no canto da tela: **"Produto marcado para revisão"**
 
-> *[ESPAÇO PARA SCREENSHOT 4.1: aba Observação com o ícone do lápis em destaque]*
+> *[ESPAÇO PARA SCREENSHOT 6.1: aba Observação com o ícone do lápis em destaque]*
 
-> *[ESPAÇO PARA SCREENSHOT 4.2: campo de Observação preenchido com a conclusão da IA + botão "Salvar"]*
+> *[ESPAÇO PARA SCREENSHOT 6.2: campo de Observação preenchido com a conclusão da IA + botão "Salvar"]*
 
-> *[ESPAÇO PARA SCREENSHOT 4.3: lista de motivos existentes no Motivo da Revisão]*
+> *[ESPAÇO PARA SCREENSHOT 6.3: motivo da revisão selecionado]*
 
-> *[ESPAÇO PARA SCREENSHOT 4.4: botão "Confirmar Revisão" + toast "Produto marcado para revisão"]*
+> *[ESPAÇO PARA SCREENSHOT 6.4: botão "Confirmar Revisão" + toast "Produto marcado para revisão"]*
 
-> **Evidência:** screenshot da observação preenchida, do motivo selecionado e do toast "Produto marcado para revisão".
+### 7.8. Passo 7 — Encerramento da jornada
 
-### 7.7. Passo 7 — Encerramento da jornada
+> **Evidência:** planilha de controle atualizada com todos os produtos do dia e pasta de screenshots organizada no Drive.
 
 - Salvar todos os screenshots na pasta do EAN no Drive (ver "Organização no Google Drive")
 - Atualizar a planilha de controle com cada produto conferido
 - Anotar dúvidas, anomalias do Hub e marcas com problemas estruturais na coluna "Observações"
-
-> **Evidência:** planilha de controle atualizada com todos os produtos do dia e pasta de screenshots organizada no Drive.
 
 ---
 
