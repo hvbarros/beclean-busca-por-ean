@@ -494,7 +494,10 @@ def checar_evidencias_worker(worker: dict) -> dict:
 
     # Cruzamento: EANs com resultado na planilha sem pasta correspondente no Drive
     # Só considera EANs que já foram trabalhados (têm resultado) — sem_resultado ainda não foram processados
-    eans_drive = {p.name for m in marcas for p in m.iterdir() if p.is_dir()}
+    # Normaliza nomes de pastas removendo zeros à esquerda para comparação
+    # (worker pode salvar como "0309970175115" mas planilha tem "309970175115")
+    eans_drive_raw = {p.name for m in marcas for p in m.iterdir() if p.is_dir()}
+    eans_drive = {e.lstrip("0") or e: e for e in eans_drive_raw}  # norm → original
     # "Já estava revisado" não exige evidência — produto não foi conferido do zero
     eans_com_resultado = (
         worker["dados"].get("eans_aprovados", [])
@@ -506,7 +509,7 @@ def checar_evidencias_worker(worker: dict) -> dict:
     eans_sem_pasta = [
         (ean, t[1], t[2])
         for ean, t in eans_planilha_uniq.items()
-        if ean not in eans_drive
+        if ean.lstrip("0") not in eans_drive
     ]
     if eans_sem_pasta:
         print(f"      ⚠  {len(eans_sem_pasta)} EAN(s) na planilha sem pasta no Drive:")
@@ -947,13 +950,13 @@ body {
 .section-desc { font-size: 14px; color: var(--fg-3); margin: -16px 0 24px; }
 .report-wrap { overflow-x: auto; margin-bottom: 56px; }
 .report-table {
+  width: 100%;
   border-collapse: collapse;
   font-size: 13px;
   border-radius: var(--r-3);
   overflow: hidden;
   border: 1px solid var(--line-soft);
   table-layout: auto;
-  white-space: nowrap;
 }
 .report-table thead th {
   text-align: left;
