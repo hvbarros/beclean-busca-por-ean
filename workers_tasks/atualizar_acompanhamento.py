@@ -183,6 +183,10 @@ def parse_planilha(rows: list[list[str]], worker_nome: str) -> dict:
         ean = row[4].strip() if len(row) > 4 else ""
         if not ean or ean == TEMPLATE_EAN:
             continue
+        # Normaliza zeros à esquerda em EANs puramente numéricos
+        # (ex: "0309970175115" → "309970175115")
+        if re.fullmatch(r"\d+", ean):
+            ean = ean.lstrip("0") or ean
         # ignora linhas onde col[0] é cabeçalho
         if row[0].strip().lower() in ("data", "#"):
             continue
@@ -195,9 +199,11 @@ def parse_planilha(rows: list[list[str]], worker_nome: str) -> dict:
         if marca and marca not in ("Natura",):
             marcas_set.add(marca)
 
-        # Valida formato do EAN
+        # Valida formato do EAN — só marca como suspeito se ainda sem resultado
         motivo_suspeito = _ean_suspeito(ean)
-        if motivo_suspeito:
+        resultado_temp = row[5].strip() if len(row) > 5 else ""
+        tem_resultado = resultado_temp in ("Aprovado", "Aprovado em lote", "Enviado para revisão", "Já estava revisado", "Match Down")
+        if motivo_suspeito and not tem_resultado:
             eans_suspeitos.append((ean, marca, produto, motivo_suspeito))
 
         if resultado in ("Aprovado", "Aprovado em lote"):
@@ -258,7 +264,8 @@ def dias_corridos(created_time_iso: str | None) -> float | None:
 def coletar_dados_planilhas(workers: list[dict]) -> None:
     """Lê todas as planilhas e popula worker['dados'] em cada item."""
     print("→ Lendo planilhas de controle…")
-    for w in workers:
+    for i, w in enumerate(workers, 1):
+        print(f"   [{i}/{len(workers)}] {w['nome']}…", flush=True)
         sheet_id, created_time = encontrar_planilha(w)
         if not sheet_id:
             print(f"   ⚠  {w['nome']}: planilha não encontrada")
@@ -315,9 +322,12 @@ def atualizar_ean_aprovados(workers: list[dict]) -> int:
 
     # Grava em lotes de 100 linhas para evitar payload excessivo no CLI
     LOTE = 100
+    n_lotes = (len(todas_rows) + LOTE - 1) // LOTE
     for i in range(0, len(todas_rows), LOTE):
         lote = todas_rows[i:i + LOTE]
         row_inicio = i + 1  # A1 = row 1
+        lote_num = i // LOTE + 1
+        print(f"   … gravando lote {lote_num}/{n_lotes} (linhas {row_inicio}–{row_inicio + len(lote) - 1})")
         gws("sheets spreadsheets values update",
             params={
                 "spreadsheetId": EAN_APROVADOS_SHEET_ID,
@@ -1340,9 +1350,11 @@ def main() -> None:
         "sem_resultado": sum(w["sem_resultado"] for w in workers_list),
         "com_evidencia": sum(w["com_evidencia"] for w in workers_list),
     }
+    print("→ Gerando HTML…", flush=True)
     html_path = buildar(workers_list, totais, data_ref)
 
     # Também atualiza build_resultados.py com os dados frescos
+    print("→ Atualizando build_resultados.py…", flush=True)
     _atualizar_build_resultados(workers_list, data_ref)
 
     # Passo 6

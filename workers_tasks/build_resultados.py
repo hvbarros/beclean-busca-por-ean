@@ -13,7 +13,7 @@ ROOT    = Path(__file__).resolve().parent
 OUT_DIR = ROOT / "build" / "resultados"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-DATA_REFERENCIA = "23 de maio de 2026 às 10:01"
+DATA_REFERENCIA = "23 de maio de 2026 às 10:20"
 
 # ── Dados ────────────────────────────────────────────────────────────────────
 
@@ -21,7 +21,7 @@ WORKERS = [
     {
         "rank":          1,
         "nome":          'Camila Teixeira Ferreira',
-        "marcas":        'NEW BRAND, NIINA SECRETS, Niina Secrets, NINA RICCI, NIOXIN, Nivea, Novex, Ny Looks, OCÉANE',
+        "marcas":        'NEW BRAND, Niina Secrets, NIINA SECRETS, NINA RICCI, NIOXIN, Nivea, Novex, Ny Looks, OCÉANE',
         "planilha":      'ok',
         "evidencias":    'alerta',
         "avaliacao":     '299 produtos, 13 aprovados (4%), resultado 100% preenchido',
@@ -37,7 +37,7 @@ WORKERS = [
     {
         "rank":          2,
         "nome":          'Nicolle Dognini',
-        "marcas":        'Adcos, Adidas, Alva, AMACIHAIR, ANTONIO BANDERAS, Aussie, Avène, AZZARO, Baby & Kids, BANDERAS, BANILA CO, Banila Co, BEAUTYCOLOR, BELA&COR, BENETTON, Biocolor, BIODERMA, Bioderma, Boca Rosa, BOCA ROSA, BOSS, BOUCHERON, Bourjois, Bozzano, BRAÉ, BRAÉ HAIR CARE, BRITNEY SPEARS, BRUNA TAVARES, Bruna Tavares, BURBERRY, BVLGARI, CACHAREL, CALVIN KLEIN, CARE Natural Beauty, CAROLINA HERRERA, CARTIER, FELPS, Felps Color, Felps Professional',
+        "marcas":        'Adcos, Adidas, Alva, AMACIHAIR, ANTONIO BANDERAS, Aussie, Avène, AZZARO, Baby & Kids, BANDERAS, Banila Co, BANILA CO, BEAUTYCOLOR, BELA&COR, BENETTON, Biocolor, Bioderma, BIODERMA, Boca Rosa, BOCA ROSA, BOSS, BOUCHERON, Bourjois, Bozzano, BRAÉ, BRAÉ HAIR CARE, BRITNEY SPEARS, Bruna Tavares, BRUNA TAVARES, BURBERRY, BVLGARI, CACHAREL, CALVIN KLEIN, CARE Natural Beauty, CAROLINA HERRERA, CARTIER, FELPS, Felps Color, Felps Professional',
         "planilha":      'alerta',
         "evidencias":    'ruim',
         "avaliacao":     '299 produtos, ⚠ 204 sem resultado, 10 aprovados (3%)',
@@ -53,7 +53,7 @@ WORKERS = [
     {
         "rank":          3,
         "nome":          'Paula Machado Alves',
-        "marcas":        'Felps professional, Fran By Franciny Ehlke, Gabriela Sabatini, GIORGIO ARMANI, Giovanna Baby, GIVENCHY, Granado, GUCCI, GUERLAIN, HEAD & SHOULDERS, Head & Shoulders, Herbissimo, Herbíssimo, HUGO BOSS, ISSEY MIYAKE, JEAN PAUL GAULTIER, JIMMY CHOO',
+        "marcas":        'Felps professional, Fran By Franciny Ehlke, Gabriela Sabatini, GIORGIO ARMANI, Giovanna Baby, GIVENCHY, Granado, GUCCI, GUERLAIN, Head & Shoulders, HEAD & SHOULDERS, Herbissimo, Herbíssimo, HUGO BOSS, ISSEY MIYAKE, JEAN PAUL GAULTIER, JIMMY CHOO',
         "planilha":      'ok',
         "evidencias":    'alerta',
         "avaliacao":     '299 produtos, 95 aprovados (32%), resultado 100% preenchido',
@@ -100,6 +100,22 @@ WORKERS = [
     },
     {
         "rank":          6,
+        "nome":          'Darlan Leal Santos',
+        "marcas":        'Sephora',
+        "planilha":      'alerta',
+        "evidencias":    'alerta',
+        "avaliacao":     '114 produtos, 26 aprovados (23%), resultado 100% preenchido',
+        "total":         114,
+        "aprovados":     26,
+        "revisao":       88,
+        "ja_revisado":   0,
+        "invalido":      0,
+        "sem_resultado": 0,
+        "com_evidencia": 112,
+        "notas": [],
+    },
+    {
+        "rank":          7,
         "nome":          'Maria Geane Silva Cardoso',
         "marcas":        'RISQUÉ, Risqué, ROCHAS, Ruby Kisses, RUBY KISSES',
         "planilha":      'alerta',
@@ -111,23 +127,7 @@ WORKERS = [
         "ja_revisado":   0,
         "invalido":      0,
         "sem_resultado": 75,
-        "com_evidencia": 53,
-        "notas": [],
-    },
-    {
-        "rank":          7,
-        "nome":          'Darlan Leal Santos',
-        "marcas":        'Sephora',
-        "planilha":      'alerta',
-        "evidencias":    'ok',
-        "avaliacao":     '111 produtos, 25 aprovados (23%), resultado 100% preenchido',
-        "total":         111,
-        "aprovados":     25,
-        "revisao":       86,
-        "ja_revisado":   0,
-        "invalido":      0,
-        "sem_resultado": 0,
-        "com_evidencia": 111,
+        "com_evidencia": 54,
         "notas": [],
     },
     {
@@ -275,6 +275,11 @@ WORKERS = [
         "notas": [],
     }
 ]
+
+
+
+
+
 
 
 
