@@ -27,7 +27,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
-DRIVE_ESPELHO = Path("/Users/hbarros/Google Drive/Drives compartilhados/baselabs-projetos/ativos/beclean_workers")
+DRIVE_ESPELHO = Path("/Users/hbarros/Library/CloudStorage/GoogleDrive-hbarros@baselabs.com.br/Drives compartilhados/baselabs-projetos/ativos/beclean_workers")
 
 # ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -139,7 +139,7 @@ def ler_planilha(sheet_id: str) -> list[list[str]]:
     """Lê A1:J300 da planilha e retorna lista de linhas."""
     res = gws("sheets spreadsheets values get", params={
         "spreadsheetId": sheet_id,
-        "range": "A1:J300",
+        "range": "A1:J5000",
     })
     return res.get("values", [])
 
