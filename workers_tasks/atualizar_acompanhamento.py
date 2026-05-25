@@ -351,6 +351,23 @@ def checar_evidencias_worker(worker: dict) -> dict:
     dados = worker["dados"]
     nome = worker["nome"]
 
+    try:
+        return _checar_evidencias_worker_impl(worker)
+    except TimeoutError as e:
+        path = str(e).split("'")[-2] if "'" in str(e) else str(e)
+        print(f"      ⚠  timeout ao acessar Drive — pasta ainda sincronizando: {path}")
+        return {
+            "com_evidencia": 0,
+            "status_evidencias": "alerta",
+            "notas": ["Timeout ao acessar Drive — pasta ainda sincronizando"],
+            "eans_sem_screenshots": [], "eans_sem_pasta": [],
+        }
+
+
+def _checar_evidencias_worker_impl(worker: dict) -> dict:
+    dados = worker["dados"]
+    nome = worker["nome"]
+
     if dados["total"] == 0:
         print(f"      sem produtos — pulando")
         return {"com_evidencia": 0, "status_evidencias": "ruim", "notas": [],
