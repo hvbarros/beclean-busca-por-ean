@@ -344,6 +344,7 @@ def atualizar_ean_aprovados(workers: list[dict]) -> int:
 # ── Passo 4 — verificar evidências (via espelho local do Drive) ───────────────
 
 _TIMEOUT_EVIDENCIAS = 120  # segundos por worker
+_HEARTBEAT_INTERVAL = 10  # segundos entre prints de progresso
 
 
 def checar_evidencias_worker(worker: dict) -> dict:
@@ -352,6 +353,7 @@ def checar_evidencias_worker(worker: dict) -> dict:
     usando o espelho local do Google Drive em DRIVE_ESPELHO.
     """
     import concurrent.futures
+    import threading
 
     _resultado_fallback = {
         "com_evidencia": 0,
@@ -361,12 +363,26 @@ def checar_evidencias_worker(worker: dict) -> dict:
         "timeout_evidencias": True,
     }
 
+    # Compartilha a pasta atual entre a thread de trabalho e o heartbeat
+    progresso = {"pasta": "iniciando…"}
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
-        future = ex.submit(_checar_evidencias_worker_impl, worker)
+        future = ex.submit(_checar_evidencias_worker_impl, worker, progresso)
+        t_inicio = time.time()
         try:
-            return future.result(timeout=_TIMEOUT_EVIDENCIAS)
+            while True:
+                restante = _TIMEOUT_EVIDENCIAS - (time.time() - t_inicio)
+                if restante <= 0:
+                    raise concurrent.futures.TimeoutError()
+                try:
+                    return future.result(timeout=min(_HEARTBEAT_INTERVAL, restante))
+                except concurrent.futures.TimeoutError:
+                    if future.done():
+                        raise
+                    decorrido = int(time.time() - t_inicio)
+                    print(f"      ⏳ {decorrido}s — aguardando Drive em: {progresso['pasta']}", flush=True)
         except concurrent.futures.TimeoutError:
-            print(f"      ⚠  timeout ({_TIMEOUT_EVIDENCIAS}s) — Drive ainda sincronizando, pulando worker")
+            print(f"      ⚠  timeout ({_TIMEOUT_EVIDENCIAS}s) — travou em: {progresso['pasta']}")
             return _resultado_fallback
         except TimeoutError as e:
             path = str(e).split("'")[-2] if "'" in str(e) else str(e)
@@ -374,7 +390,11 @@ def checar_evidencias_worker(worker: dict) -> dict:
             return _resultado_fallback
 
 
-def _checar_evidencias_worker_impl(worker: dict) -> dict:
+def _checar_evidencias_worker_impl(worker: dict, progresso: dict | None = None) -> dict:
+    def _set(pasta: str) -> None:
+        if progresso is not None:
+            progresso["pasta"] = pasta
+
     dados = worker["dados"]
     nome = worker["nome"]
 
@@ -395,6 +415,7 @@ def _checar_evidencias_worker_impl(worker: dict) -> dict:
             "eans_sem_screenshots": [], "eans_sem_pasta": [],
         }
 
+    _set(str(pasta_ev))
     marcas = sorted(p for p in pasta_ev.iterdir() if p.is_dir())
     print(f"      {len(marcas)} marca(s): {', '.join(m.name for m in marcas)}")
 
@@ -416,6 +437,7 @@ def _checar_evidencias_worker_impl(worker: dict) -> dict:
     # Corrige pastas de EAN com prefixo "EAN " (ex: "EAN 7891234567890" → "7891234567890")
     prefixos_corrigidos = 0
     for pasta_marca in marcas:
+        _set(str(pasta_marca))
         for pasta_ean in list(pasta_marca.iterdir()):
             if not pasta_ean.is_dir(): continue
             novo_nome = re.sub(r'^EAN\s+', '', pasta_ean.name, flags=re.I).strip()
@@ -489,6 +511,7 @@ def _checar_evidencias_worker_impl(worker: dict) -> dict:
         return "screenshots sem ordem verificável (nomes não numerados, mtimes iguais e nomes sem descrição)"
 
     for pasta_marca in marcas:
+        _set(str(pasta_marca))
         eans = sorted(p for p in pasta_marca.iterdir() if p.is_dir())
         ok_marca = 0
         nome_marca = pasta_marca.name
@@ -496,6 +519,7 @@ def _checar_evidencias_worker_impl(worker: dict) -> dict:
 
         for pasta_ean in eans:
             nome_ean = pasta_ean.name
+            _set(str(pasta_ean))
             pasta_ss = next(
                 (p for p in pasta_ean.iterdir()
                  if p.is_dir() and re.search(r"screenshot", p.name, re.I)),
