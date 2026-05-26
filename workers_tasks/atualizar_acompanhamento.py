@@ -380,10 +380,19 @@ def atualizar_ean_aprovados(workers: list[dict]) -> int:
 
 _TIMEOUT_PROBE = 3  # segundos para probe de sincronização por EAN
 
-# Executor compartilhado para todos os iterdir_seguro — evita overhead de
-# criar/destruir ThreadPoolExecutor a cada chamada (centenas por worker)
 import concurrent.futures as _cf
-_executor = _cf.ThreadPoolExecutor(max_workers=4)
+import threading as _threading
+
+
+def _marcar_thread_daemon():
+    _threading.current_thread().daemon = True
+
+
+# Executor compartilhado para todos os iterdir_seguro — evita overhead de
+# criar/destruir ThreadPoolExecutor a cada chamada (centenas por worker).
+# initializer marca cada thread como daemon → Ctrl+C não fica preso em
+# join() de thread bloqueada em syscall de filesystem do Drive.
+_executor = _cf.ThreadPoolExecutor(max_workers=4, initializer=_marcar_thread_daemon)
 
 
 def _iterdir_seguro(pasta: "Path") -> list | None:
