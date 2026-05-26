@@ -177,6 +177,8 @@ def parse_planilha(rows: list[list[str]], worker_nome: str) -> dict:
     eans_sem_resultado = []   # lista de (ean, marca, produto)
     eans_invalidos = []       # lista de (ean, marca, produto, resultado_digitado)
     eans_suspeitos = []       # lista de (ean, marca, produto, motivo)
+    eans_duplicados = []      # lista de (ean, marca, produto, n_ocorrencias)
+    eans_vistos: dict[str, tuple] = {}  # ean → (marca, produto) da primeira ocorrência
 
     for row in rows:
         if len(row) < 5:
@@ -196,6 +198,11 @@ def parse_planilha(rows: list[list[str]], worker_nome: str) -> dict:
         marca = row[2].strip() if len(row) > 2 else ""
         produto = row[3].strip() if len(row) > 3 else ""
         resultado = row[5].strip() if len(row) > 5 else ""
+
+        if ean in eans_vistos:
+            eans_duplicados.append((ean, marca, produto))
+        else:
+            eans_vistos[ean] = (marca, produto)
 
         if marca and marca not in ("Natura",):
             marcas_set.add(marca)
@@ -226,7 +233,7 @@ def parse_planilha(rows: list[list[str]], worker_nome: str) -> dict:
     # Status da planilha
     if total == 0:
         status_planilha = "ruim"
-    elif invalido > 0 or sem_resultado > 0 or eans_suspeitos:
+    elif invalido > 0 or sem_resultado > 0 or eans_suspeitos or eans_duplicados:
         status_planilha = "alerta"
     else:
         status_planilha = "ok"
@@ -248,6 +255,7 @@ def parse_planilha(rows: list[list[str]], worker_nome: str) -> dict:
         "eans_sem_resultado": eans_sem_resultado,
         "eans_invalidos": eans_invalidos,
         "eans_suspeitos": eans_suspeitos,
+        "eans_duplicados": eans_duplicados,
     }
 
 
@@ -275,22 +283,48 @@ def coletar_dados_planilhas(workers: list[dict]) -> None:
                 "total": 0, "aprovados": 0, "revisao": 0,
                 "ja_revisado": 0, "invalido": 0, "sem_resultado": 0,
                 "marcas": [], "status_planilha": "ruim",
-                "eans_aprovados": [], "eans_sem_resultado": [], "eans_invalidos": [],
-                "eans_suspeitos": [],
+                "eans_aprovados": [], "eans_revisao": [], "eans_ja_revisado": [],
+                "eans_sem_resultado": [], "eans_invalidos": [],
+                "eans_suspeitos": [], "eans_duplicados": [],
                 "dias_corridos": None, "vazao": None,
             }
             continue
         w["sheet_id"] = sheet_id
         rows = ler_planilha(sheet_id)
+
+        # Detecta leitura truncada: menos de 10 linhas de dados é suspeito
+        # para qualquer worker que já tem pastas no Drive
+        n_linhas_dados = sum(1 for r in rows if len(r) >= 5 and r[4].strip() and r[0].strip().lower() not in ("data", "#"))
+        pasta_worker = DRIVE_ESPELHO / w["folder_name"]
+        pasta_ev = pasta_worker / "evidencias"
+        n_pastas_drive = sum(1 for m in pasta_ev.iterdir() if m.is_dir() for p in m.iterdir() if p.is_dir()) if pasta_ev.is_dir() else 0
+        if n_pastas_drive > 20 and n_linhas_dados < n_pastas_drive * 0.1:
+            print(f"   ⚠  {w['nome']}: planilha retornou apenas {n_linhas_dados} linhas mas Drive tem {n_pastas_drive} pastas — possível leitura truncada, pulando")
+            w["dados"] = {
+                "total": 0, "aprovados": 0, "revisao": 0,
+                "ja_revisado": 0, "invalido": 0, "sem_resultado": 0,
+                "marcas": [], "status_planilha": "ruim",
+                "eans_aprovados": [], "eans_revisao": [], "eans_ja_revisado": [],
+                "eans_sem_resultado": [], "eans_invalidos": [],
+                "eans_suspeitos": [], "eans_duplicados": [],
+                "dias_corridos": None, "vazao": None,
+                "leitura_truncada": True,
+            }
+            continue
+
         w["dados"] = parse_planilha(rows, w["nome"])
         d = w["dados"]
         dias = dias_corridos(created_time)
         d["dias_corridos"] = dias
         d["vazao"] = round(d["total"] / dias, 1) if dias and d["total"] > 0 else None
+        alertas = []
+        if d.get("eans_duplicados"):
+            alertas.append(f"{len(d['eans_duplicados'])} EAN(s) duplicado(s)")
         print(f"   ✓  {w['nome']}: {d['total']} produtos, "
               f"{d['aprovados']} aprov, {d['revisao']} rev, "
               f"{d['sem_resultado']} sem resultado, "
-              f"vazão {d['vazao']} prod/dia ({dias}d)")
+              f"vazão {d['vazao']} prod/dia ({dias}d)"
+              + (f" ⚠ {', '.join(alertas)}" if alertas else ""))
 
 
 # ── Passo 3 — atualizar ean_aprovados ────────────────────────────────────────
@@ -675,6 +709,7 @@ def montar_workers_list(workers: list[dict]) -> list[dict]:
             "eans_sem_screenshots": d.get("eans_sem_screenshots", []),
             "eans_sem_pasta": d.get("eans_sem_pasta", []),
             "eans_suspeitos": d.get("eans_suspeitos", []),
+            "eans_duplicados": d.get("eans_duplicados", []),
         })
         rank += 1
 
@@ -718,6 +753,7 @@ def erros_html(w: dict) -> str:
         + len(w.get("eans_sem_screenshots", []))
         + len(w.get("eans_sem_pasta", []))
         + len(w.get("eans_suspeitos", []))
+        + len(w.get("eans_duplicados", []))
     )
     if n == 0:
         return '<span class="val-nd">—</span>'
@@ -866,10 +902,25 @@ def _detalhes_html(w: dict) -> str:
             f'{_agrupar_por_marca_html(grupos)}</div>'
         )
 
+    # EANs duplicados na planilha — agrupados por marca
+    duplicados = w.get("eans_duplicados", [])
+    if duplicados:
+        grupos = {}
+        for ean, marca, produto in duplicados:
+            grupos.setdefault(marca, []).append(
+                f'<li><code>{ean}</code>'
+                f'<span class="prob-produto">{produto}</span></li>'
+            )
+        secoes.append(
+            f'<div class="det-secao">'
+            f'<span class="det-label prob-label-ruim">EAN duplicado na planilha ({len(duplicados)})</span>'
+            f'{_agrupar_por_marca_html(grupos)}</div>'
+        )
+
     if not secoes:
         return ""
 
-    n_problemas = len(sem_res) + len(invalidos) + len(sem_ss) + len(sem_pasta) + len(suspeitos)
+    n_problemas = len(sem_res) + len(invalidos) + len(sem_ss) + len(sem_pasta) + len(suspeitos) + len(duplicados)
     summary_label = f"detalhes · {n_problemas} problema{'s' if n_problemas != 1 else ''}" if n_problemas else "detalhes"
 
     return (
@@ -1366,6 +1417,13 @@ def exibir_resumo(workers: list[dict], workers_list: list[dict],
             print(f"     {w['nome']}: {w['sem_resultado']} produto(s) sem resultado na planilha")
         for w in sem_evidencia:
             print(f"     {w['nome']}: cobertura de evidências insuficiente")
+    truncados = [w for w in workers if w["dados"].get("leitura_truncada")]
+    if truncados:
+        print()
+        print("  ⚠  PLANILHA COM LEITURA SUSPEITA (poucos dados vs Drive):")
+        for w in truncados:
+            print(f"     {w['nome']}")
+        print("     → Rode novamente para confirmar.")
     if timeout_ev:
         print()
         print("  ⏱  EVIDÊNCIAS NÃO VERIFICADAS (timeout no Drive):")
