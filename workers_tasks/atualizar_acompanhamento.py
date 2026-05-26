@@ -394,6 +394,11 @@ def _checar_evidencias_worker_impl(worker: dict, progresso: dict | None = None) 
     def _set(pasta: str) -> None:
         if progresso is not None:
             progresso["pasta"] = pasta
+        # Imprime imediatamente para que o último print antes de um travamento
+        # seja visível no terminal, mesmo que o heartbeat não dispare
+        partes = pasta.split("/")
+        resumo = "/".join(partes[-2:]) if len(partes) >= 2 else pasta
+        print(f"         🔍 {resumo}", flush=True)
 
     dados = worker["dados"]
     nome = worker["nome"]
@@ -415,7 +420,6 @@ def _checar_evidencias_worker_impl(worker: dict, progresso: dict | None = None) 
             "eans_sem_screenshots": [], "eans_sem_pasta": [],
         }
 
-    _set(str(pasta_ev))
     marcas = sorted(p for p in pasta_ev.iterdir() if p.is_dir())
     print(f"      {len(marcas)} marca(s): {', '.join(m.name for m in marcas)}")
 
@@ -437,7 +441,6 @@ def _checar_evidencias_worker_impl(worker: dict, progresso: dict | None = None) 
     # Corrige pastas de EAN com prefixo "EAN " (ex: "EAN 7891234567890" → "7891234567890")
     prefixos_corrigidos = 0
     for pasta_marca in marcas:
-        _set(str(pasta_marca))
         for pasta_ean in list(pasta_marca.iterdir()):
             if not pasta_ean.is_dir(): continue
             novo_nome = re.sub(r'^EAN\s+', '', pasta_ean.name, flags=re.I).strip()
@@ -511,7 +514,6 @@ def _checar_evidencias_worker_impl(worker: dict, progresso: dict | None = None) 
         return "screenshots sem ordem verificável (nomes não numerados, mtimes iguais e nomes sem descrição)"
 
     for pasta_marca in marcas:
-        _set(str(pasta_marca))
         eans = sorted(p for p in pasta_marca.iterdir() if p.is_dir())
         ok_marca = 0
         nome_marca = pasta_marca.name
