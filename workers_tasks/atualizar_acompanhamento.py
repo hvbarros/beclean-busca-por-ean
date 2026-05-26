@@ -378,8 +378,8 @@ def atualizar_ean_aprovados(workers: list[dict]) -> int:
 
 # ── Passo 4 — verificar evidências (via espelho local do Drive) ───────────────
 
-_TIMEOUT_EVIDENCIAS = 120  # segundos por worker
-_HEARTBEAT_INTERVAL = 10  # segundos entre prints de progresso
+_TIMEOUT_EVIDENCIAS = 10   # segundos por worker
+_HEARTBEAT_INTERVAL = 5    # segundos entre prints de progresso
 _TIMEOUT_PROBE = 3         # segundos para probe inicial de sincronização
 
 
@@ -1456,11 +1456,12 @@ def exibir_resumo(workers: list[dict], workers_list: list[dict],
             print(f"     {w['nome']}")
         print("     → Rode novamente para confirmar.")
     if timeout_ev:
+        total_nao_verificados = sum(w["dados"]["total"] for w in timeout_ev)
         print()
-        print("  ⏱  EVIDÊNCIAS NÃO VERIFICADAS (timeout no Drive):")
+        print(f"  ⏱  EVIDÊNCIAS NÃO VERIFICADAS (Drive ainda sincronizando) — {total_nao_verificados} EANs:")
         for w in timeout_ev:
-            print(f"     {w['nome']}")
-        print("     → Aguarde a sincronização e rode novamente.")
+            print(f"     {w['nome']}: {w['dados']['total']} EANs")
+        print("     → Rode novamente quando a sincronização terminar.")
     print("=" * 60)
 
 
