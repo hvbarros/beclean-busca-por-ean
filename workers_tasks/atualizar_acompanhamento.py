@@ -343,25 +343,34 @@ def atualizar_ean_aprovados(workers: list[dict]) -> int:
 
 # ── Passo 4 — verificar evidências (via espelho local do Drive) ───────────────
 
+_TIMEOUT_EVIDENCIAS = 120  # segundos por worker
+
+
 def checar_evidencias_worker(worker: dict) -> dict:
     """
     Verifica estrutura evidencias/ > [Marca]/ > [EAN]/ > screenshots/
     usando o espelho local do Google Drive em DRIVE_ESPELHO.
     """
-    dados = worker["dados"]
-    nome = worker["nome"]
+    import concurrent.futures
 
-    try:
-        return _checar_evidencias_worker_impl(worker)
-    except TimeoutError as e:
-        path = str(e).split("'")[-2] if "'" in str(e) else str(e)
-        print(f"      ⚠  timeout ao acessar Drive — pasta ainda sincronizando: {path}")
-        return {
-            "com_evidencia": 0,
-            "status_evidencias": "alerta",
-            "notas": ["Timeout ao acessar Drive — pasta ainda sincronizando"],
-            "eans_sem_screenshots": [], "eans_sem_pasta": [],
-        }
+    _resultado_fallback = {
+        "com_evidencia": 0,
+        "status_evidencias": "alerta",
+        "notas": ["Timeout ao acessar Drive — pasta ainda sincronizando"],
+        "eans_sem_screenshots": [], "eans_sem_pasta": [],
+    }
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+        future = ex.submit(_checar_evidencias_worker_impl, worker)
+        try:
+            return future.result(timeout=_TIMEOUT_EVIDENCIAS)
+        except concurrent.futures.TimeoutError:
+            print(f"      ⚠  timeout ({_TIMEOUT_EVIDENCIAS}s) — Drive ainda sincronizando, pulando worker")
+            return _resultado_fallback
+        except TimeoutError as e:
+            path = str(e).split("'")[-2] if "'" in str(e) else str(e)
+            print(f"      ⚠  timeout ao acessar Drive — pasta ainda sincronizando: {path}")
+            return _resultado_fallback
 
 
 def _checar_evidencias_worker_impl(worker: dict) -> dict:
