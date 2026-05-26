@@ -406,35 +406,34 @@ class _DaemonThreadPoolExecutor(_cf.ThreadPoolExecutor):
             _cf.thread._threads_queues[t] = self._work_queue
 
 
-# Executor compartilhado para todos os iterdir_seguro — evita overhead de
-# criar/destruir ThreadPoolExecutor a cada chamada (centenas por worker).
-# Threads daemon garantem que Ctrl+C não fique preso em join() de thread
-# bloqueada em syscall de filesystem do Drive.
-_executor = _DaemonThreadPoolExecutor(max_workers=4)
-
 
 def _iterdir_seguro(pasta: "Path") -> list | None:
     """
     Tenta listar pasta com timeout de _TIMEOUT_PROBE segundos.
     Retorna a lista de entradas ou None se timeout/erro.
-    Usa polling em fatias de 0.05s para que Ctrl+C seja processado
-    entre fatias (future.result(timeout=N) bloqueia sinais no wait()).
+
+    Usa um executor descartável por chamada (max_workers=1, daemon).
+    Motivo: future.cancel() não interrompe uma task já em execução —
+    uma thread presa em I/O bloqueado do Drive ocupa o slot para sempre.
+    Com executor dedicado a thread presa é descartada junto com o executor
+    e não bloqueia chamadas subsequentes.
     """
-    future = _executor.submit(list, pasta.iterdir())
+    ex = _DaemonThreadPoolExecutor(max_workers=1)
+    future = ex.submit(list, pasta.iterdir())
     deadline = time.monotonic() + _TIMEOUT_PROBE
     try:
         while True:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
-                future.cancel()
                 return None
             try:
                 return future.result(timeout=min(0.05, remaining))
             except _cf.TimeoutError:
-                continue  # permite KeyboardInterrupt entre fatias
+                continue
     except (TimeoutError, OSError):
-        future.cancel()
         return None
+    finally:
+        ex.shutdown(wait=False)  # descarta executor (e thread presa) sem bloquear
 
 
 def checar_evidencias_worker(worker: dict) -> dict:
