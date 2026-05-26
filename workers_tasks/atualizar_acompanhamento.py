@@ -446,6 +446,7 @@ def _checar_evidencias_worker_impl(worker: dict, progresso: dict | None = None) 
     pasta_worker = DRIVE_ESPELHO / worker["folder_name"]
     pasta_ev = pasta_worker / "evidencias"
 
+    _set(str(pasta_ev))
     if not pasta_ev.is_dir():
         print(f"      ⚠  pasta evidencias/ não encontrada")
         return {
