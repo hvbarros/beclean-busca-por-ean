@@ -421,8 +421,11 @@ def checar_evidencias_worker(worker: dict) -> dict:
             return _resultado_fallback
         except TimeoutError as e:
             path = str(e).split("'")[-2] if "'" in str(e) else str(e)
-            print(f"      ⚠  timeout ao acessar Drive — pasta ainda sincronizando: {path}")
+            print(f"      ⚠  timeout ao acessar Drive — pasta: {path}")
             return _resultado_fallback
+        except NotADirectoryError as e:
+            print(f"      ⚠  entrada inesperada no Drive (ex: .DS_Store): {e}")
+            return {**_resultado_fallback, "notas": [f"Erro de filesystem: {e}"], "timeout_evidencias": False}
 
 
 def _checar_evidencias_worker_impl(worker: dict, progresso: dict | None = None) -> dict:
@@ -456,7 +459,7 @@ def _checar_evidencias_worker_impl(worker: dict, progresso: dict | None = None) 
             "eans_sem_screenshots": [], "eans_sem_pasta": [],
         }
 
-    marcas = sorted(p for p in pasta_ev.iterdir() if p.is_dir())
+    marcas = sorted(p for p in pasta_ev.iterdir() if p.is_dir() and not p.name.startswith("."))
     print(f"      {len(marcas)} marca(s): {', '.join(m.name for m in marcas)}")
 
     # Corrige nomes de subpastas de screenshots escritos de forma errada
@@ -488,11 +491,11 @@ def _checar_evidencias_worker_impl(worker: dict, progresso: dict | None = None) 
     if prefixos_corrigidos:
         print(f"      ✏  {prefixos_corrigidos} pasta(s) de EAN com prefixo corrigida(s)")
         # Recarrega marcas após renomeações
-        marcas = sorted(p for p in pasta_ev.iterdir() if p.is_dir())
+        marcas = sorted(p for p in pasta_ev.iterdir() if p.is_dir() and not p.name.startswith("."))
 
     renomeadas = 0
     for pasta_marca in marcas:
-        for pasta_ean in (p for p in pasta_marca.iterdir() if p.is_dir()):
+        for pasta_ean in (p for p in pasta_marca.iterdir() if p.is_dir() and not p.name.startswith(".")):
             for sub in list(pasta_ean.iterdir()):
                 if sub.is_dir() and sub.name != 'screenshots' and _parece_screenshots(sub.name):
                     tmp = sub.parent / '__tmp_ss'
@@ -507,7 +510,7 @@ def _checar_evidencias_worker_impl(worker: dict, progresso: dict | None = None) 
     EXTS_IMAGEM = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif", ".tiff", ".heic"}
     movidas = 0
     for pasta_marca in marcas:
-        for pasta_ean in (p for p in pasta_marca.iterdir() if p.is_dir()):
+        for pasta_ean in (p for p in pasta_marca.iterdir() if p.is_dir() and not p.name.startswith(".")):
             imagens_soltas = [
                 f for f in pasta_ean.iterdir()
                 if f.is_file() and f.suffix.lower() in EXTS_IMAGEM
@@ -550,7 +553,7 @@ def _checar_evidencias_worker_impl(worker: dict, progresso: dict | None = None) 
         return "screenshots sem ordem verificável (nomes não numerados, mtimes iguais e nomes sem descrição)"
 
     for pasta_marca in marcas:
-        eans = sorted(p for p in pasta_marca.iterdir() if p.is_dir())
+        eans = sorted(p for p in pasta_marca.iterdir() if p.is_dir() and not p.name.startswith("."))
         ok_marca = 0
         nome_marca = pasta_marca.name
         print(f"      📁 {nome_marca} ({len(eans)} EANs)")
