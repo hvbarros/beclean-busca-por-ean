@@ -380,6 +380,23 @@ def atualizar_ean_aprovados(workers: list[dict]) -> int:
 
 _TIMEOUT_EVIDENCIAS = 120  # segundos por worker
 _HEARTBEAT_INTERVAL = 10  # segundos entre prints de progresso
+_TIMEOUT_PROBE = 3         # segundos para probe inicial de sincronização
+
+
+def _pasta_sincronizada(pasta_ev: "Path") -> bool:
+    """Testa se a pasta de evidências responde em menos de _TIMEOUT_PROBE segundos."""
+    import concurrent.futures
+
+    def _probe():
+        return list(pasta_ev.iterdir())
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+        future = ex.submit(_probe)
+        try:
+            future.result(timeout=_TIMEOUT_PROBE)
+            return True
+        except (concurrent.futures.TimeoutError, TimeoutError, OSError):
+            return False
 
 
 def checar_evidencias_worker(worker: dict) -> dict:
@@ -450,6 +467,16 @@ def _checar_evidencias_worker_impl(worker: dict, progresso: dict | None = None) 
     pasta_ev = pasta_worker / "evidencias"
 
     _set(str(pasta_ev))
+    if pasta_ev.is_dir() and not _pasta_sincronizada(pasta_ev):
+        print(f"      ⏭  pasta ainda sincronizando — pulando")
+        return {
+            "com_evidencia": 0,
+            "status_evidencias": "alerta",
+            "notas": ["Timeout ao acessar Drive — pasta ainda sincronizando"],
+            "eans_sem_screenshots": [], "eans_sem_pasta": [],
+            "timeout_evidencias": True,
+        }
+
     if not pasta_ev.is_dir():
         print(f"      ⚠  pasta evidencias/ não encontrada")
         return {
