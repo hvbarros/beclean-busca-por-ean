@@ -380,20 +380,23 @@ def atualizar_ean_aprovados(workers: list[dict]) -> int:
 
 _TIMEOUT_PROBE = 3  # segundos para probe de sincronização por EAN
 
+# Executor compartilhado para todos os iterdir_seguro — evita overhead de
+# criar/destruir ThreadPoolExecutor a cada chamada (centenas por worker)
+import concurrent.futures as _cf
+_executor = _cf.ThreadPoolExecutor(max_workers=4)
+
 
 def _iterdir_seguro(pasta: "Path") -> list | None:
     """
     Tenta listar pasta com timeout de _TIMEOUT_PROBE segundos.
     Retorna a lista de entradas ou None se timeout/erro.
     """
-    import concurrent.futures
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
-        future = ex.submit(list, pasta.iterdir())
-        try:
-            return future.result(timeout=_TIMEOUT_PROBE)
-        except (concurrent.futures.TimeoutError, TimeoutError, OSError):
-            return None
+    future = _executor.submit(list, pasta.iterdir())
+    try:
+        return future.result(timeout=_TIMEOUT_PROBE)
+    except (_cf.TimeoutError, TimeoutError, OSError):
+        future.cancel()
+        return None
 
 
 def checar_evidencias_worker(worker: dict) -> dict:
