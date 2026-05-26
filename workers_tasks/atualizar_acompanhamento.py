@@ -358,6 +358,7 @@ def checar_evidencias_worker(worker: dict) -> dict:
         "status_evidencias": "alerta",
         "notas": ["Timeout ao acessar Drive — pasta ainda sincronizando"],
         "eans_sem_screenshots": [], "eans_sem_pasta": [],
+        "timeout_evidencias": True,
     }
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
@@ -1327,6 +1328,10 @@ def exibir_resumo(workers: list[dict], workers_list: list[dict],
         w for w in workers_list
         if w["total"] > 0 and w.get("evidencias") == "ruim"
     ]
+    timeout_ev = [
+        w for w in workers
+        if w["dados"].get("timeout_evidencias")
+    ]
     if criticos or sem_evidencia:
         print()
         print("  ⚠  AÇÃO IMEDIATA:")
@@ -1334,6 +1339,12 @@ def exibir_resumo(workers: list[dict], workers_list: list[dict],
             print(f"     {w['nome']}: {w['sem_resultado']} produto(s) sem resultado na planilha")
         for w in sem_evidencia:
             print(f"     {w['nome']}: cobertura de evidências insuficiente")
+    if timeout_ev:
+        print()
+        print("  ⏱  EVIDÊNCIAS NÃO VERIFICADAS (timeout no Drive):")
+        for w in timeout_ev:
+            print(f"     {w['nome']}")
+        print("     → Aguarde a sincronização e rode novamente.")
     print("=" * 60)
 
 
