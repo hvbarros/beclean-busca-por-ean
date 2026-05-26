@@ -384,15 +384,33 @@ import concurrent.futures as _cf
 import threading as _threading
 
 
-def _marcar_thread_daemon():
-    _threading.current_thread().daemon = True
+class _DaemonThreadPoolExecutor(_cf.ThreadPoolExecutor):
+    """ThreadPoolExecutor com threads daemon — não bloqueiam Ctrl+C no join()."""
+    def _adjust_thread_count(self):
+        if self._idle_semaphore.acquire(timeout=0):
+            return
+        import weakref as _wr
+        def weakref_cb(_, q=self._work_queue):
+            q.put(None)
+        num_threads = len(self._threads)
+        if num_threads < self._max_workers:
+            thread_name = '%s_%d' % (self._thread_name_prefix or self, num_threads)
+            t = _threading.Thread(
+                name=thread_name, target=_cf.thread._worker,
+                args=(_wr.ref(self, weakref_cb), self._work_queue,
+                      self._initializer, self._initargs),
+            )
+            t.daemon = True  # setar antes de start() — única janela válida
+            t.start()
+            self._threads.add(t)
+            _cf.thread._threads_queues[t] = self._work_queue
 
 
 # Executor compartilhado para todos os iterdir_seguro — evita overhead de
 # criar/destruir ThreadPoolExecutor a cada chamada (centenas por worker).
-# initializer marca cada thread como daemon → Ctrl+C não fica preso em
-# join() de thread bloqueada em syscall de filesystem do Drive.
-_executor = _cf.ThreadPoolExecutor(max_workers=4, initializer=_marcar_thread_daemon)
+# Threads daemon garantem que Ctrl+C não fique preso em join() de thread
+# bloqueada em syscall de filesystem do Drive.
+_executor = _DaemonThreadPoolExecutor(max_workers=4)
 
 
 def _iterdir_seguro(pasta: "Path") -> list | None:
