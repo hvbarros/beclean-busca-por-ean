@@ -417,11 +417,22 @@ def _iterdir_seguro(pasta: "Path") -> list | None:
     """
     Tenta listar pasta com timeout de _TIMEOUT_PROBE segundos.
     Retorna a lista de entradas ou None se timeout/erro.
+    Usa polling em fatias de 0.05s para que Ctrl+C seja processado
+    entre fatias (future.result(timeout=N) bloqueia sinais no wait()).
     """
     future = _executor.submit(list, pasta.iterdir())
+    deadline = time.monotonic() + _TIMEOUT_PROBE
     try:
-        return future.result(timeout=_TIMEOUT_PROBE)
-    except (_cf.TimeoutError, TimeoutError, OSError):
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                future.cancel()
+                return None
+            try:
+                return future.result(timeout=min(0.05, remaining))
+            except _cf.TimeoutError:
+                continue  # permite KeyboardInterrupt entre fatias
+    except (TimeoutError, OSError):
         future.cancel()
         return None
 
