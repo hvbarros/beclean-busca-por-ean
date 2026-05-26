@@ -39,7 +39,7 @@ R2_OBJECT_KEY = "propostas/beclean/instrucoes_workers/resultados/index.html"
 PUBLISH_URL = "https://propostas.baselabs.com.br/beclean/instrucoes_workers/resultados/"
 
 TEMPLATE_EAN = "7891100000000"  # linha de exemplo do template (Natura)
-RESULTADOS_VALIDOS = {"Aprovado", "Aprovado em lote", "Enviado para revisão", "Já estava revisado"}
+RESULTADOS_VALIDOS = {"Aprovado", "Aprovado em lote", "Enviado para revisão", "Já estava revisado", "Match Down"}
 
 MESES_PT = {
     1: "janeiro", 2: "fevereiro", 3: "março", 4: "abril",
@@ -378,25 +378,22 @@ def atualizar_ean_aprovados(workers: list[dict]) -> int:
 
 # ── Passo 4 — verificar evidências (via espelho local do Drive) ───────────────
 
-_TIMEOUT_EVIDENCIAS = 10   # segundos por worker
-_HEARTBEAT_INTERVAL = 5    # segundos entre prints de progresso
-_TIMEOUT_PROBE = 3         # segundos para probe inicial de sincronização
+_TIMEOUT_PROBE = 3  # segundos para probe de sincronização por EAN
 
 
-def _pasta_sincronizada(pasta_ev: "Path") -> bool:
-    """Testa se a pasta de evidências responde em menos de _TIMEOUT_PROBE segundos."""
+def _iterdir_seguro(pasta: "Path") -> list | None:
+    """
+    Tenta listar pasta com timeout de _TIMEOUT_PROBE segundos.
+    Retorna a lista de entradas ou None se timeout/erro.
+    """
     import concurrent.futures
 
-    def _probe():
-        return list(pasta_ev.iterdir())
-
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
-        future = ex.submit(_probe)
+        future = ex.submit(list, pasta.iterdir())
         try:
-            future.result(timeout=_TIMEOUT_PROBE)
-            return True
+            return future.result(timeout=_TIMEOUT_PROBE)
         except (concurrent.futures.TimeoutError, TimeoutError, OSError):
-            return False
+            return None
 
 
 def checar_evidencias_worker(worker: dict) -> dict:
@@ -404,78 +401,31 @@ def checar_evidencias_worker(worker: dict) -> dict:
     Verifica estrutura evidencias/ > [Marca]/ > [EAN]/ > screenshots/
     usando o espelho local do Google Drive em DRIVE_ESPELHO.
     """
-    import concurrent.futures
-    import threading
-
-    _resultado_fallback = {
-        "com_evidencia": 0,
-        "status_evidencias": "alerta",
-        "notas": ["Timeout ao acessar Drive — pasta ainda sincronizando"],
-        "eans_sem_screenshots": [], "eans_sem_pasta": [],
-        "timeout_evidencias": True,
-    }
-
-    # Compartilha a pasta atual entre a thread de trabalho e o heartbeat
-    progresso = {"pasta": "iniciando…"}
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
-        future = ex.submit(_checar_evidencias_worker_impl, worker, progresso)
-        t_inicio = time.time()
-        try:
-            while True:
-                restante = _TIMEOUT_EVIDENCIAS - (time.time() - t_inicio)
-                if restante <= 0:
-                    raise concurrent.futures.TimeoutError()
-                try:
-                    return future.result(timeout=min(_HEARTBEAT_INTERVAL, restante))
-                except concurrent.futures.TimeoutError:
-                    if future.done():
-                        raise
-                    decorrido = int(time.time() - t_inicio)
-                    print(f"      ⏳ {decorrido}s — aguardando Drive em: {progresso['pasta']}", flush=True)
-        except concurrent.futures.TimeoutError:
-            print(f"      ⚠  timeout ({_TIMEOUT_EVIDENCIAS}s) — travou em: {progresso['pasta']}")
-            return _resultado_fallback
-        except TimeoutError as e:
-            path = str(e).split("'")[-2] if "'" in str(e) else str(e)
-            print(f"      ⚠  timeout ao acessar Drive — pasta: {path}")
-            return _resultado_fallback
-        except NotADirectoryError as e:
-            print(f"      ⚠  entrada inesperada no Drive (ex: .DS_Store): {e}")
-            return {**_resultado_fallback, "notas": [f"Erro de filesystem: {e}"], "timeout_evidencias": False}
+    try:
+        return _checar_evidencias_worker_impl(worker)
+    except NotADirectoryError as e:
+        print(f"      ⚠  entrada inesperada no Drive (ex: .DS_Store): {e}")
+        return {
+            "com_evidencia": 0,
+            "status_evidencias": "alerta",
+            "notas": [f"Erro de filesystem: {e}"],
+            "eans_sem_screenshots": [], "eans_sem_pasta": [],
+            "timeout_evidencias": False,
+            "eans_timeout": [],
+        }
 
 
-def _checar_evidencias_worker_impl(worker: dict, progresso: dict | None = None) -> dict:
-    def _set(pasta: str) -> None:
-        if progresso is not None:
-            progresso["pasta"] = pasta
-        # Imprime imediatamente para que o último print antes de um travamento
-        # seja visível no terminal, mesmo que o heartbeat não dispare
-        partes = pasta.split("/")
-        resumo = "/".join(partes[-2:]) if len(partes) >= 2 else pasta
-        print(f"         🔍 {resumo}", flush=True)
-
+def _checar_evidencias_worker_impl(worker: dict) -> dict:
     dados = worker["dados"]
     nome = worker["nome"]
 
     if dados["total"] == 0:
         print(f"      sem produtos — pulando")
         return {"com_evidencia": 0, "status_evidencias": "ruim", "notas": [],
-                "eans_sem_screenshots": [], "eans_sem_pasta": []}
+                "eans_sem_screenshots": [], "eans_sem_pasta": [], "eans_timeout": []}
 
     pasta_worker = DRIVE_ESPELHO / worker["folder_name"]
     pasta_ev = pasta_worker / "evidencias"
-
-    _set(str(pasta_ev))
-    if pasta_ev.is_dir() and not _pasta_sincronizada(pasta_ev):
-        print(f"      ⏭  pasta ainda sincronizando — pulando")
-        return {
-            "com_evidencia": 0,
-            "status_evidencias": "alerta",
-            "notas": ["Timeout ao acessar Drive — pasta ainda sincronizando"],
-            "eans_sem_screenshots": [], "eans_sem_pasta": [],
-            "timeout_evidencias": True,
-        }
 
     if not pasta_ev.is_dir():
         print(f"      ⚠  pasta evidencias/ não encontrada")
@@ -483,19 +433,28 @@ def _checar_evidencias_worker_impl(worker: dict, progresso: dict | None = None) 
             "com_evidencia": 0,
             "status_evidencias": "ruim",
             "notas": ["Pasta <code>evidencias</code> não encontrada"],
-            "eans_sem_screenshots": [], "eans_sem_pasta": [],
+            "eans_sem_screenshots": [], "eans_sem_pasta": [], "eans_timeout": [],
         }
 
-    marcas = sorted(p for p in pasta_ev.iterdir() if p.is_dir() and not p.name.startswith("."))
+    entradas_ev = _iterdir_seguro(pasta_ev)
+    if entradas_ev is None:
+        print(f"      ⏭  pasta evidencias/ não respondeu — pulando worker")
+        return {
+            "com_evidencia": 0,
+            "status_evidencias": "alerta",
+            "notas": ["Timeout ao acessar Drive — pasta ainda sincronizando"],
+            "eans_sem_screenshots": [], "eans_sem_pasta": [],
+            "timeout_evidencias": True, "eans_timeout": [],
+        }
+
+    marcas = sorted(p for p in entradas_ev if p.is_dir() and not p.name.startswith("."))
     print(f"      {len(marcas)} marca(s): {', '.join(m.name for m in marcas)}")
 
     # Corrige nomes de subpastas de screenshots escritos de forma errada
     def _parece_screenshots(nome: str) -> bool:
-        """True se o nome é parecido com 'screenshots' (distância de edição <= 3)."""
         a, b = nome.lower(), "screenshots"
         if abs(len(a) - len(b)) > 3:
             return False
-        # Levenshtein iterativo
         prev = list(range(len(b) + 1))
         for ch in a:
             curr = [prev[0] + 1]
@@ -504,10 +463,12 @@ def _checar_evidencias_worker_impl(worker: dict, progresso: dict | None = None) 
             prev = curr
         return prev[-1] <= 3
 
-    # Corrige pastas de EAN com prefixo "EAN " (ex: "EAN 7891234567890" → "7891234567890")
+    # Corrige pastas de EAN com prefixo "EAN "
     prefixos_corrigidos = 0
     for pasta_marca in marcas:
-        for pasta_ean in list(pasta_marca.iterdir()):
+        entradas = _iterdir_seguro(pasta_marca)
+        if entradas is None: continue
+        for pasta_ean in entradas:
             if not pasta_ean.is_dir(): continue
             novo_nome = re.sub(r'^EAN\s+', '', pasta_ean.name, flags=re.I).strip()
             if novo_nome != pasta_ean.name:
@@ -517,13 +478,17 @@ def _checar_evidencias_worker_impl(worker: dict, progresso: dict | None = None) 
                 prefixos_corrigidos += 1
     if prefixos_corrigidos:
         print(f"      ✏  {prefixos_corrigidos} pasta(s) de EAN com prefixo corrigida(s)")
-        # Recarrega marcas após renomeações
-        marcas = sorted(p for p in pasta_ev.iterdir() if p.is_dir() and not p.name.startswith("."))
+        entradas_ev = _iterdir_seguro(pasta_ev)
+        marcas = sorted(p for p in (entradas_ev or []) if p.is_dir() and not p.name.startswith("."))
 
     renomeadas = 0
     for pasta_marca in marcas:
-        for pasta_ean in (p for p in pasta_marca.iterdir() if p.is_dir() and not p.name.startswith(".")):
-            for sub in list(pasta_ean.iterdir()):
+        entradas = _iterdir_seguro(pasta_marca)
+        if entradas is None: continue
+        for pasta_ean in (p for p in entradas if p.is_dir() and not p.name.startswith(".")):
+            subs = _iterdir_seguro(pasta_ean)
+            if subs is None: continue
+            for sub in subs:
                 if sub.is_dir() and sub.name != 'screenshots' and _parece_screenshots(sub.name):
                     tmp = sub.parent / '__tmp_ss'
                     sub.rename(tmp)
@@ -537,11 +502,12 @@ def _checar_evidencias_worker_impl(worker: dict, progresso: dict | None = None) 
     EXTS_IMAGEM = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif", ".tiff", ".heic"}
     movidas = 0
     for pasta_marca in marcas:
-        for pasta_ean in (p for p in pasta_marca.iterdir() if p.is_dir() and not p.name.startswith(".")):
-            imagens_soltas = [
-                f for f in pasta_ean.iterdir()
-                if f.is_file() and f.suffix.lower() in EXTS_IMAGEM
-            ]
+        entradas = _iterdir_seguro(pasta_marca)
+        if entradas is None: continue
+        for pasta_ean in (p for p in entradas if p.is_dir() and not p.name.startswith(".")):
+            conteudo = _iterdir_seguro(pasta_ean)
+            if conteudo is None: continue
+            imagens_soltas = [f for f in conteudo if f.is_file() and f.suffix.lower() in EXTS_IMAGEM]
             if imagens_soltas:
                 pasta_ss = pasta_ean / "screenshots"
                 pasta_ss.mkdir(exist_ok=True)
@@ -553,6 +519,7 @@ def _checar_evidencias_worker_impl(worker: dict, progresso: dict | None = None) 
         print(f"      ✏  {movidas} imagem(ns) solta(s) movida(s) para screenshots/")
 
     com_evidencia = 0
+    eans_timeout: list[tuple[str, str]] = []  # (marca, ean)
     sem_screenshots: list[tuple[str, str, str]] = []  # (marca, ean, motivo)
 
     def _validar_ordem_screenshots(arquivos: list) -> str | None:
@@ -580,21 +547,37 @@ def _checar_evidencias_worker_impl(worker: dict, progresso: dict | None = None) 
         return "screenshots sem ordem verificável (nomes não numerados, mtimes iguais e nomes sem descrição)"
 
     for pasta_marca in marcas:
-        eans = sorted(p for p in pasta_marca.iterdir() if p.is_dir() and not p.name.startswith("."))
+        entradas_marca = _iterdir_seguro(pasta_marca)
+        if entradas_marca is None:
+            print(f"      ⏭  {pasta_marca.name} — timeout, pulando marca inteira")
+            eans_timeout.append((pasta_marca.name, "*"))
+            continue
+        eans = sorted(p for p in entradas_marca if p.is_dir() and not p.name.startswith("."))
         ok_marca = 0
         nome_marca = pasta_marca.name
         print(f"      📁 {nome_marca} ({len(eans)} EANs)")
 
         for pasta_ean in eans:
             nome_ean = pasta_ean.name
-            _set(str(pasta_ean))
+            print(f"         🔍 {nome_marca}/{nome_ean}", flush=True)
+            conteudo_ean = _iterdir_seguro(pasta_ean)
+            if conteudo_ean is None:
+                print(f"         ⏭  {nome_ean} — timeout")
+                eans_timeout.append((nome_marca, nome_ean))
+                continue
+            conteudo_ean = [p for p in conteudo_ean if not p.name.startswith(".")]
             pasta_ss = next(
-                (p for p in pasta_ean.iterdir()
+                (p for p in conteudo_ean
                  if p.is_dir() and re.search(r"screenshot", p.name, re.I)),
                 None,
             )
             if pasta_ss:
-                arquivos = [f for f in pasta_ss.iterdir() if f.is_file()]
+                arquivos_ss = _iterdir_seguro(pasta_ss)
+                if arquivos_ss is None:
+                    print(f"         ⏭  {nome_ean}/screenshots — timeout")
+                    eans_timeout.append((nome_marca, nome_ean))
+                    continue
+                arquivos = [f for f in arquivos_ss if f.is_file()]
                 if arquivos:
                     prob_ordem = _validar_ordem_screenshots(arquivos)
                     com_evidencia += 1
@@ -608,7 +591,7 @@ def _checar_evidencias_worker_impl(worker: dict, progresso: dict | None = None) 
                     sem_screenshots.append((nome_marca, nome_ean, "screenshots/ vazia"))
                     print(f"         ⚠  {nome_ean} — screenshots/ vazia")
             else:
-                arquivos = [f for f in pasta_ean.iterdir() if f.is_file()]
+                arquivos = [f for f in conteudo_ean if f.is_file()]
                 videos = [f for f in arquivos if f.suffix.lower() in {".mp4", ".mov", ".avi", ".mkv", ".webm", ".wmv"}]
                 if videos:
                     com_evidencia += 1
@@ -625,7 +608,7 @@ def _checar_evidencias_worker_impl(worker: dict, progresso: dict | None = None) 
     # Só considera EANs que já foram trabalhados (têm resultado) — sem_resultado ainda não foram processados
     # Normaliza nomes de pastas removendo zeros à esquerda para comparação
     # (worker pode salvar como "0309970175115" mas planilha tem "309970175115")
-    eans_drive_raw = {p.name for m in marcas for p in m.iterdir() if p.is_dir()}
+    eans_drive_raw = {p.name for m in marcas for p in (_iterdir_seguro(m) or []) if p.is_dir()}
     eans_drive = {e.lstrip("0") or e: e for e in eans_drive_raw}  # norm → original
     # "Já estava revisado" não exige evidência — produto não foi conferido do zero
     eans_com_resultado = (
@@ -649,10 +632,19 @@ def _checar_evidencias_worker_impl(worker: dict, progresso: dict | None = None) 
     if sem_screenshots:
         n = len(sem_screenshots)
         notas.append(f"{n} EAN{'s' if n > 1 else ''} sem evidência confirmada")
+    if eans_timeout:
+        n = len(eans_timeout)
+        notas.append(f"{n} EAN{'s' if n > 1 else ''} não verificado{'s' if n > 1 else ''} (timeout no Drive)")
+        if eans_timeout:
+            print(f"      ⏱  {n} EAN(s) pulado(s) por timeout:")
+            for marca, ean in eans_timeout[:5]:
+                print(f"         {marca}/{ean}")
+            if n > 5:
+                print(f"         … e mais {n - 5}")
 
     total = dados["total"]
     pct = round(com_evidencia / total * 100) if total else 0
-    if pct == 100:
+    if pct == 100 and not eans_timeout:
         status = "ok"
     elif pct >= 50:
         status = "alerta"
@@ -665,6 +657,7 @@ def _checar_evidencias_worker_impl(worker: dict, progresso: dict | None = None) 
         "notas": notas,
         "eans_sem_screenshots": sem_screenshots,
         "eans_sem_pasta": eans_sem_pasta,
+        "eans_timeout": eans_timeout,
     }
 
 
@@ -1439,7 +1432,7 @@ def exibir_resumo(workers: list[dict], workers_list: list[dict],
     ]
     timeout_ev = [
         w for w in workers
-        if w["dados"].get("timeout_evidencias")
+        if w["dados"].get("timeout_evidencias") or w["dados"].get("eans_timeout")
     ]
     if criticos or sem_evidencia:
         print()
@@ -1456,11 +1449,15 @@ def exibir_resumo(workers: list[dict], workers_list: list[dict],
             print(f"     {w['nome']}")
         print("     → Rode novamente para confirmar.")
     if timeout_ev:
-        total_nao_verificados = sum(w["dados"]["total"] for w in timeout_ev)
+        total_nao_verificados = sum(
+            len(w["dados"].get("eans_timeout") or []) or w["dados"]["total"]
+            for w in timeout_ev
+        )
         print()
         print(f"  ⏱  EVIDÊNCIAS NÃO VERIFICADAS (Drive ainda sincronizando) — {total_nao_verificados} EANs:")
         for w in timeout_ev:
-            print(f"     {w['nome']}: {w['dados']['total']} EANs")
+            n = len(w["dados"].get("eans_timeout") or []) or w["dados"]["total"]
+            print(f"     {w['nome']}: {n} EANs")
         print("     → Rode novamente quando a sincronização terminar.")
     print("=" * 60)
 
