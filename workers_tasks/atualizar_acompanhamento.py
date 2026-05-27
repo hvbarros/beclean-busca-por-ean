@@ -298,7 +298,14 @@ def coletar_dados_planilhas(workers: list[dict]) -> None:
         n_linhas_dados = sum(1 for r in rows if len(r) >= 5 and r[4].strip() and r[0].strip().lower() not in ("data", "#"))
         pasta_worker = DRIVE_ESPELHO / w["folder_name"]
         pasta_ev = pasta_worker / "evidencias"
-        n_pastas_drive = sum(1 for m in pasta_ev.iterdir() if m.is_dir() for p in m.iterdir() if p.is_dir()) if pasta_ev.is_dir() else 0
+        if pasta_ev.is_dir():
+            marcas_ev = _iterdir_seguro(pasta_ev) or []
+            n_pastas_drive = sum(
+                1 for m in marcas_ev if m.is_dir()
+                for p in (_iterdir_seguro(m) or []) if p.is_dir()
+            )
+        else:
+            n_pastas_drive = 0
         if n_pastas_drive > 20 and n_linhas_dados < n_pastas_drive * 0.1:
             print(f"   ⚠  {w['nome']}: planilha retornou apenas {n_linhas_dados} linhas mas Drive tem {n_pastas_drive} pastas — possível leitura truncada, pulando")
             w["dados"] = {
