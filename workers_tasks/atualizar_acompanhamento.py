@@ -445,24 +445,28 @@ def atualizar_eans_completo(workers: list[dict]) -> int:
             }}]})
         print(f"   … grid expandido: {row_count_atual} → {row_count_atual + delta} linhas")
 
-    # Limpa e regrava
+    # Limpa e regrava em lotes de 1000 via batchUpdate (cada chamada carrega
+    # 1000 linhas × 6 colunas ≈ ~50KB — bem abaixo do limite de argumento do OS).
+    # batchUpdate conta como 1 write request por chamada, então 6 chamadas para
+    # 6000 linhas vs 60 chamadas com lotes de 100 — evita o rate limit de 60/min.
     gws("sheets spreadsheets values clear",
         params={"spreadsheetId": EANS_COMPLETO_SHEET_ID,
                 "range": f"A1:F{max(total + 1, 2) + 50}"},
         json_body={})
 
-    LOTE = 100
+    LOTE = 1000
     n_lotes = (len(todas_rows) + LOTE - 1) // LOTE
     for i in range(0, len(todas_rows), LOTE):
         lote = todas_rows[i:i + LOTE]
         row_inicio = i + 1
         lote_num = i // LOTE + 1
         print(f"   … gravando lote {lote_num}/{n_lotes} (linhas {row_inicio}–{row_inicio + len(lote) - 1})")
-        gws("sheets spreadsheets values update",
-            params={"spreadsheetId": EANS_COMPLETO_SHEET_ID,
-                    "range": f"A{row_inicio}",
-                    "valueInputOption": "RAW"},
-            json_body={"values": lote})
+        gws("sheets spreadsheets values batchUpdate",
+            params={"spreadsheetId": EANS_COMPLETO_SHEET_ID},
+            json_body={
+                "valueInputOption": "RAW",
+                "data": [{"range": f"A{row_inicio}", "values": lote}],
+            })
 
     print(f"   ✓  {total} EANs gravados em eans_completo.")
     return total
