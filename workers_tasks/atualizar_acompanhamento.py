@@ -345,6 +345,26 @@ def atualizar_ean_aprovados(workers: list[dict]) -> int:
     todas_rows = [header] + [list(r) + [data_hoje] for r in todas_linhas]
     total = len(todas_linhas)
 
+    # Garante que o grid tem linhas suficientes para todos os dados.
+    # Busca o rowCount atual e expande só se necessário — appendDimension
+    # adiciona ao total existente, então precisamos saber o delta.
+    n_linhas_necessarias = total + 10  # +10 de margem
+    meta = gws("sheets spreadsheets get",
+               params={"spreadsheetId": EAN_APROVADOS_SHEET_ID,
+                       "fields": "sheets.properties.gridProperties.rowCount"})
+    row_count_atual = meta["sheets"][0]["properties"]["gridProperties"]["rowCount"]
+    if row_count_atual < n_linhas_necessarias:
+        delta = n_linhas_necessarias - row_count_atual
+        gws("sheets spreadsheets batchUpdate",
+            params={"spreadsheetId": EAN_APROVADOS_SHEET_ID},
+            json_body={"requests": [{"appendDimension": {
+                "sheetId": 0,
+                "dimension": "ROWS",
+                "length": delta,
+            }}]},
+        )
+        print(f"   … grid expandido: {row_count_atual} → {row_count_atual + delta} linhas")
+
     # Limpa o intervalo atual antes de gravar (evita sobras de execuções anteriores)
     ultimo_row = max(total + 1, 2)
     gws("sheets spreadsheets values clear",
