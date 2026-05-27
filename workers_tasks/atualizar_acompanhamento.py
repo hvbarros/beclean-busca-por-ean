@@ -352,14 +352,15 @@ def atualizar_ean_aprovados(workers: list[dict]) -> int:
     n_linhas_necessarias = total + 10  # +10 de margem
     meta = gws("sheets spreadsheets get",
                params={"spreadsheetId": EAN_APROVADOS_SHEET_ID,
-                       "fields": "sheets.properties.gridProperties.rowCount"})
-    row_count_atual = meta["sheets"][0]["properties"]["gridProperties"]["rowCount"]
+                       "fields": "sheets.properties"})
+    sheet_props = meta["sheets"][0]["properties"]
+    row_count_atual = sheet_props["gridProperties"]["rowCount"]
     if row_count_atual < n_linhas_necessarias:
         delta = n_linhas_necessarias - row_count_atual
         gws("sheets spreadsheets batchUpdate",
             params={"spreadsheetId": EAN_APROVADOS_SHEET_ID},
             json_body={"requests": [{"appendDimension": {
-                "sheetId": 0,
+                "sheetId": sheet_props["sheetId"],
                 "dimension": "ROWS",
                 "length": delta,
             }}]},
@@ -427,18 +428,20 @@ def atualizar_eans_completo(workers: list[dict]) -> int:
     todas_rows = [header] + todas_linhas
     total = len(todas_linhas)
 
-    # Expande o grid se necessário
+    # Expande o grid se necessário (busca sheetId real — não é necessariamente 0)
     n_necessarias = total + 10
     meta = gws("sheets spreadsheets get",
                params={"spreadsheetId": EANS_COMPLETO_SHEET_ID,
-                       "fields": "sheets.properties.gridProperties.rowCount"})
-    row_count_atual = meta["sheets"][0]["properties"]["gridProperties"]["rowCount"]
+                       "fields": "sheets.properties"})
+    sheet_props = meta["sheets"][0]["properties"]
+    sheet_id_real = sheet_props["sheetId"]
+    row_count_atual = sheet_props["gridProperties"]["rowCount"]
     if row_count_atual < n_necessarias:
         delta = n_necessarias - row_count_atual
         gws("sheets spreadsheets batchUpdate",
             params={"spreadsheetId": EANS_COMPLETO_SHEET_ID},
             json_body={"requests": [{"appendDimension": {
-                "sheetId": 0, "dimension": "ROWS", "length": delta,
+                "sheetId": sheet_id_real, "dimension": "ROWS", "length": delta,
             }}]})
         print(f"   … grid expandido: {row_count_atual} → {row_count_atual + delta} linhas")
 
