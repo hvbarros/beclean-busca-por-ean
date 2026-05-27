@@ -433,7 +433,13 @@ def _iterdir_seguro(pasta: "Path") -> list | None:
     except (TimeoutError, OSError):
         return None
     finally:
-        ex.shutdown(wait=False)  # descarta executor (e thread presa) sem bloquear
+        # Remove threads deste executor do registro global do concurrent.futures.
+        # O atexit handler _python_exit faz t.join() em tudo que está em
+        # _threads_queues — se não removermos, o processo trava no exit
+        # esperando threads presas em I/O bloqueado do Drive.
+        for t in list(ex._threads):
+            _cf.thread._threads_queues.pop(t, None)
+        ex.shutdown(wait=False)
 
 
 def checar_evidencias_worker(worker: dict) -> dict:
