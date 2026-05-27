@@ -770,6 +770,35 @@ def _checar_evidencias_worker_impl(worker: dict) -> dict:
         for ean, marca, produto in eans_sem_pasta:
             print(f"         ✗  {ean} — {marca} — {produto}")
 
+    # Cruzamento inverso: pastas no Drive sem EAN correspondente na planilha.
+    # eans_drive = {norm → original} já construído acima.
+    # Exclui EANs com timeout (pasta pode existir mas não foi lida).
+    # Exclui marcas inteiras com timeout ("*") — listagem incompleta.
+    marcas_com_timeout_total = {marca for marca, ean in eans_timeout if ean == "*"}
+    eans_timeout_individuais = {ean for _, ean in eans_timeout if ean != "*"}
+    # Reconstrói eans_drive excluindo marcas com timeout total
+    eans_drive_verificados: dict[str, str] = {}  # norm → original
+    for pasta_marca in marcas:
+        if pasta_marca.name in marcas_com_timeout_total:
+            continue
+        for p in (_iterdir_seguro(pasta_marca) or []):
+            if p.is_dir() and not p.name.startswith(".") and p.name not in eans_timeout_individuais:
+                norm = p.name.lstrip("0") or p.name
+                eans_drive_verificados[norm] = p.name
+
+    eans_planilha_norm = {e.lstrip("0") or e for e in eans_planilha_uniq}
+    eans_drive_sem_planilha = [
+        nome_original
+        for e_norm, nome_original in eans_drive_verificados.items()
+        if e_norm not in eans_planilha_norm and nome_original not in eans_planilha_uniq
+    ]
+    if eans_drive_sem_planilha:
+        print(f"      ⚠  {len(eans_drive_sem_planilha)} pasta(s) no Drive sem EAN na planilha:")
+        for nome_pasta in eans_drive_sem_planilha[:10]:
+            print(f"         ✗  {nome_pasta}")
+        if len(eans_drive_sem_planilha) > 10:
+            print(f"         … e mais {len(eans_drive_sem_planilha) - 10}")
+
     notas = []
     if sem_screenshots:
         n = len(sem_screenshots)
