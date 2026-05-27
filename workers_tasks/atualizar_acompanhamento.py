@@ -35,6 +35,7 @@ DRIVE_ESPELHO = Path("/Users/hbarros/Library/CloudStorage/GoogleDrive-hbarros@ba
 ROOT = Path(__file__).resolve().parent
 
 EAN_APROVADOS_SHEET_ID = "1bNrzG38HFx9pBLTkDVUgviw1dJjpHhY62muml0RYbGA"
+EANS_COMPLETO_SHEET_ID = "1IYeXtA3jk7cA4gjAdNXBcMpNCfjqoTBLEnr4bm__fto"
 R2_OBJECT_KEY = "propostas/beclean/instrucoes_workers/resultados/index.html"
 PUBLISH_URL = "https://propostas.baselabs.com.br/beclean/instrucoes_workers/resultados/"
 
@@ -393,6 +394,74 @@ def atualizar_ean_aprovados(workers: list[dict]) -> int:
         )
 
     print(f"   ✓  {total} EANs gravados em ean_aprovados.")
+    return total
+
+
+# ── Passo 3b — atualizar eans_completo ───────────────────────────────────────
+
+def atualizar_eans_completo(workers: list[dict]) -> int:
+    """Reescreve a planilha eans_completo com todos os EANs de todos os workers. Retorna total."""
+    print("→ Atualizando planilha eans_completo…")
+
+    CATEGORIAS = {
+        "eans_aprovados":    lambda t: t[3],          # (ean, marca, produto, resultado)
+        "eans_revisao":      lambda t: "Enviado para revisão",  # (ean, marca, produto)
+        "eans_ja_revisado":  lambda t: "Já estava revisado",
+        "eans_invalidos":    lambda t: t[3],          # (ean, marca, produto, resultado)
+        "eans_suspeitos":    lambda t: f"Suspeito ({t[3]})",    # (ean, marca, produto, motivo)
+        "eans_sem_resultado": lambda t: "",           # (ean, marca, produto)
+    }
+
+    todas_linhas: list[list] = []
+    data_hoje = data_hoje_ddmmaaaa()
+    for w in workers:
+        d = w["dados"]
+        for campo, get_resultado in CATEGORIAS.items():
+            for t in d.get(campo, []):
+                ean, marca, produto = t[0], t[1], t[2]
+                resultado = get_resultado(t)
+                todas_linhas.append([ean, marca, produto, resultado, w["nome"], data_hoje])
+
+    todas_linhas.sort(key=lambda x: (x[4], x[1], x[0]))  # worker, marca, ean
+    header = ["EAN", "Marca", "Produto", "Resultado", "Worker", "Data"]
+    todas_rows = [header] + todas_linhas
+    total = len(todas_linhas)
+
+    # Expande o grid se necessário
+    n_necessarias = total + 10
+    meta = gws("sheets spreadsheets get",
+               params={"spreadsheetId": EANS_COMPLETO_SHEET_ID,
+                       "fields": "sheets.properties.gridProperties.rowCount"})
+    row_count_atual = meta["sheets"][0]["properties"]["gridProperties"]["rowCount"]
+    if row_count_atual < n_necessarias:
+        delta = n_necessarias - row_count_atual
+        gws("sheets spreadsheets batchUpdate",
+            params={"spreadsheetId": EANS_COMPLETO_SHEET_ID},
+            json_body={"requests": [{"appendDimension": {
+                "sheetId": 0, "dimension": "ROWS", "length": delta,
+            }}]})
+        print(f"   … grid expandido: {row_count_atual} → {row_count_atual + delta} linhas")
+
+    # Limpa e regrava
+    gws("sheets spreadsheets values clear",
+        params={"spreadsheetId": EANS_COMPLETO_SHEET_ID,
+                "range": f"A1:F{max(total + 1, 2) + 50}"},
+        json_body={})
+
+    LOTE = 100
+    n_lotes = (len(todas_rows) + LOTE - 1) // LOTE
+    for i in range(0, len(todas_rows), LOTE):
+        lote = todas_rows[i:i + LOTE]
+        row_inicio = i + 1
+        lote_num = i // LOTE + 1
+        print(f"   … gravando lote {lote_num}/{n_lotes} (linhas {row_inicio}–{row_inicio + len(lote) - 1})")
+        gws("sheets spreadsheets values update",
+            params={"spreadsheetId": EANS_COMPLETO_SHEET_ID,
+                    "range": f"A{row_inicio}",
+                    "valueInputOption": "RAW"},
+            json_body={"values": lote})
+
+    print(f"   ✓  {total} EANs gravados em eans_completo.")
     return total
 
 
@@ -1548,6 +1617,7 @@ def main() -> None:
 
     # Passo 3
     n_eans = atualizar_ean_aprovados(workers)
+    atualizar_eans_completo(workers)
 
     # Passo 4
     if args.skip_evidencias:
